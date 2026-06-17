@@ -1,0 +1,3978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BurrowKeeper">
+<meta name="theme-color" content="#1C1F26">
+<title>BurrowKeeper</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<style>
+:root {
+  /* Core Palette */
+  --bg-deep: #141720;
+  --bg-base: #1C1F2A;
+  --bg-card: #252B38;
+  --bg-elevated: #2E3547;
+  --bg-input: #1E2330;
+  --border: #333D52;
+  --border-light: #2A3245;
+
+  /* Brand */
+  --sage: #7CB98C;
+  --sage-dim: #4A7A5A;
+  --sage-glow: rgba(124,185,140,0.15);
+  --amber: #E6A84A;
+  --amber-dim: #9A6E2A;
+  --amber-glow: rgba(230,168,74,0.15);
+  --coral: #E07B6A;
+  --coral-dim: #9A4A3A;
+  --coral-glow: rgba(224,123,106,0.15);
+  --sky: #6BA3C8;
+  --sky-glow: rgba(107,163,200,0.15);
+  --lavender: #9B8EC4;
+
+  /* Text */
+  --text-primary: #EEE8DC;
+  --text-secondary: #9AA3B4;
+  --text-muted: #5A6478;
+  --text-inverse: #1C1F2A;
+
+  /* Status */
+  --status-excellent: #7CB98C;
+  --status-good: #6BA3C8;
+  --status-fair: #E6A84A;
+  --status-aging: #E07B6A;
+  --status-replace: #D94F3D;
+
+  /* Spacing */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Nav */
+  --nav-height: 72px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Light mode */
+body.light-mode {
+  --bg-deep: #F0EDE8;
+  --bg-base: #F7F4F0;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-input: #F0EDE8;
+  --border: #DDD8D0;
+  --border-light: #E8E4DF;
+  --text-primary: #1C1F2A;
+  --text-secondary: #5A6478;
+  --text-muted: #9AA3B4;
+  --text-inverse: #FFFFFF;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT
+───────────────────────────────────────────── */
+#app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+#main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+}
+
+/* Tablet: left rail */
+@media (min-width: 768px) {
+  #app-shell { flex-direction: row; }
+  #main-content { padding-bottom: 24px; }
+}
+
+/* ─────────────────────────────────────────────
+   TOP BAR
+───────────────────────────────────────────── */
+#top-bar {
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.top-bar-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.top-bar-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.top-bar-left { display: flex; align-items: center; gap: 12px; }
+.top-bar-right { display: flex; align-items: center; gap: 8px; }
+
+/* Logo mark */
+.bk-logo-mark {
+  width: 36px; height: 36px;
+  background: var(--sage);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  #top-bar { display: none; }
+}
+
+/* ─────────────────────────────────────────────
+   BOTTOM NAV (mobile)
+───────────────────────────────────────────── */
+#bottom-nav {
+  background: var(--bg-base);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  height: calc(var(--nav-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.nav-tab.active { color: var(--sage); }
+.nav-tab .nav-icon { font-size: 22px; line-height: 1; }
+.nav-badge {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 14px);
+  min-width: 16px;
+  height: 16px;
+  background: var(--coral);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px;
+}
+
+@media (min-width: 768px) {
+  #bottom-nav { display: none; }
+}
+
+/* ─────────────────────────────────────────────
+   LEFT RAIL (tablet)
+───────────────────────────────────────────── */
+#left-rail {
+  display: none;
+  flex-direction: column;
+  background: var(--bg-base);
+  border-right: 1px solid var(--border);
+  width: 240px;
+  flex-shrink: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  #left-rail { display: flex; }
+}
+
+.rail-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rail-brand {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 4px;
+}
+
+.rail-brand-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.rail-house-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-left: 2px;
+}
+
+.rail-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--sage-glow);
+  color: var(--sage);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+.rail-nav {
+  flex: 1;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.rail-nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.rail-nav-item.active { background: var(--sage-glow); color: var(--sage); font-weight: 600; }
+.rail-nav-item .nav-icon { font-size: 18px; }
+.rail-nav-item .nav-label { flex: 1; }
+.rail-nav-badge {
+  background: var(--coral);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.rail-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─────────────────────────────────────────────
+   SCREENS
+───────────────────────────────────────────── */
+.screen { display: none; padding: 20px; }
+.screen.active { display: block; }
+
+@media (min-width: 768px) {
+  .screen { padding: 28px 32px; }
+}
+
+@media (min-width: 1200px) {
+  .screen { padding: 32px 48px; max-width: 1400px; }
+}
+
+.screen-header {
+  margin-bottom: 24px;
+}
+
+.screen-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.screen-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ─────────────────────────────────────────────
+   CARDS
+───────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.card-sm { padding: 14px 16px; }
+.card-lg { padding: 24px; }
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+}
+
+/* ─────────────────────────────────────────────
+   GRID LAYOUTS
+───────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+@media (min-width: 768px) {
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1200px) {
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ─────────────────────────────────────────────
+   STAT WIDGETS
+───────────────────────────────────────────── */
+.stat-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stat-widget.sage { border-color: var(--sage-dim); background: linear-gradient(135deg, var(--bg-card), rgba(124,185,140,0.08)); }
+.stat-widget.amber { border-color: var(--amber-dim); background: linear-gradient(135deg, var(--bg-card), rgba(230,168,74,0.08)); }
+.stat-widget.coral { border-color: var(--coral-dim); background: linear-gradient(135deg, var(--bg-card), rgba(224,123,106,0.08)); }
+.stat-widget.sky { border-color: rgba(107,163,200,0.4); background: linear-gradient(135deg, var(--bg-card), rgba(107,163,200,0.08)); }
+
+/* ─────────────────────────────────────────────
+   HEALTH SCORE
+───────────────────────────────────────────── */
+.health-score-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.health-ring-wrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+
+.health-ring-wrap svg { transform: rotate(-90deg); }
+
+.health-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.health-score-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.health-score-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.health-info { flex: 1; }
+.health-grade {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.health-tips { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.health-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.health-tip::before { content: "→"; color: var(--sage); font-size: 11px; margin-top: 1px; }
+
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--sage); color: var(--text-inverse); }
+.btn-primary:hover { background: #8ECF9E; }
+.btn-secondary { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: var(--coral-glow); color: var(--coral); border: 1px solid var(--coral-dim); }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: var(--radius-sm); }
+.btn-lg { padding: 15px 28px; font-size: 16px; border-radius: var(--radius-lg); }
+.btn-block { width: 100%; }
+.btn-icon-only { padding: 10px; width: 40px; height: 40px; border-radius: 50%; }
+
+/* ─────────────────────────────────────────────
+   BADGES / TAGS
+───────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.badge-excellent { background: rgba(124,185,140,0.15); color: var(--status-excellent); }
+.badge-good { background: rgba(107,163,200,0.15); color: var(--status-good); }
+.badge-fair { background: rgba(230,168,74,0.15); color: var(--status-fair); }
+.badge-aging { background: rgba(224,123,106,0.15); color: var(--status-aging); }
+.badge-replace { background: rgba(217,79,61,0.15); color: var(--status-replace); }
+.badge-sage { background: var(--sage-glow); color: var(--sage); }
+.badge-amber { background: var(--amber-glow); color: var(--amber); }
+.badge-coral { background: var(--coral-glow); color: var(--coral); }
+.badge-sky { background: var(--sky-glow); color: var(--sky); }
+
+/* ─────────────────────────────────────────────
+   FORMS
+───────────────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.form-hint { font-size: 11px; color: var(--text-muted); }
+
+.form-input, .form-select, .form-textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+  padding: 12px 14px;
+  width: 100%;
+  transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-glow);
+}
+
+.form-textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
+.form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235A6478' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ─────────────────────────────────────────────
+   ASSET CARDS
+───────────────────────────────────────────── */
+.asset-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.asset-card:hover {
+  border-color: var(--sage-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.asset-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.asset-name { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.asset-category { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+.asset-life-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.asset-life-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.asset-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────
+   MAINTENANCE TIMELINE
+───────────────────────────────────────────── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  position: relative;
+}
+
+.timeline-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+}
+
+.timeline-dot.past { background: var(--bg-elevated); border-color: var(--border); }
+.timeline-dot.future { background: var(--amber-glow); border-color: var(--amber-dim); }
+.timeline-dot.home { background: var(--sage-glow); border-color: var(--sage-dim); }
+
+.timeline-content { flex: 1; padding-top: 4px; }
+.timeline-date { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+.timeline-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.timeline-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.timeline-cost { font-size: 13px; font-weight: 700; color: var(--sage); margin-top: 4px; }
+
+/* ─────────────────────────────────────────────
+   MODALS
+───────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: 0;
+  width: 100%;
+  max-height: 92dvh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.modal-overlay.open .modal {
+  transform: translateY(0);
+}
+
+@media (min-width: 600px) {
+  .modal-overlay { align-items: center; }
+  .modal {
+    border-radius: var(--radius-xl);
+    max-width: 600px;
+    max-height: 85dvh;
+  }
+}
+
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 14px auto 0;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title { font-size: 17px; font-weight: 700; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+
+/* ─────────────────────────────────────────────
+   SECTION SEPARATORS
+───────────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  margin-top: 28px;
+}
+
+.section-header:first-child { margin-top: 0; }
+
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+/* ─────────────────────────────────────────────
+   EMPTY STATES
+───────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-icon { font-size: 48px; opacity: 0.5; }
+.empty-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.empty-subtitle { font-size: 14px; color: var(--text-secondary); max-width: 280px; line-height: 1.5; }
+
+/* ─────────────────────────────────────────────
+   SETUP / ONBOARDING SCREENS
+───────────────────────────────────────────── */
+#setup-screen, #sync-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  overflow-y: auto;
+}
+
+.setup-logo {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.setup-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.setup-tagline {
+  font-size: 15px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 320px;
+  line-height: 1.5;
+  margin-bottom: 32px;
+}
+
+.setup-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
+}
+
+.setup-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.setup-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.sync-key-display {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: var(--sage);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* ─────────────────────────────────────────────
+   CONTRACTORS
+───────────────────────────────────────────── */
+.contractor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contractor-name { font-size: 15px; font-weight: 700; }
+.contractor-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.contractor-contact { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
+
+/* ─────────────────────────────────────────────
+   WARRANTY CARDS
+───────────────────────────────────────────── */
+.warranty-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.warranty-progress {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.warranty-progress-fill {
+  height: 100%;
+  background: var(--sage);
+  border-radius: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   TOAST NOTIFICATIONS
+───────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  width: calc(100vw - 48px);
+  max-width: 420px;
+}
+
+@media (min-width: 768px) {
+  #toast-container { bottom: 24px; }
+}
+
+.toast {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(16px); } }
+
+/* ─────────────────────────────────────────────
+   SEARCH BAR
+───────────────────────────────────────────── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.search-bar input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.search-bar input:focus { outline: none; }
+.search-bar input::placeholder { color: var(--text-muted); }
+
+/* ─────────────────────────────────────────────
+   DIVIDER
+───────────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+/* ─────────────────────────────────────────────
+   DETAIL ROW
+───────────────────────────────────────────── */
+.detail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+  gap: 12px;
+}
+
+.detail-row:last-child { border-bottom: none; }
+.detail-key { font-size: 13px; color: var(--text-muted); font-weight: 500; flex-shrink: 0; min-width: 130px; }
+.detail-val { font-size: 14px; color: var(--text-primary); font-weight: 500; text-align: right; }
+
+/* ─────────────────────────────────────────────
+   FAB
+───────────────────────────────────────────── */
+.fab {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: var(--sage);
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-size: 26px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(124,185,140,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  transition: all 0.2s ease;
+}
+
+.fab:active { transform: scale(0.92); }
+
+@media (min-width: 768px) {
+  .fab { bottom: 24px; right: 32px; }
+}
+
+/* ─────────────────────────────────────────────
+   PASSPORT
+───────────────────────────────────────────── */
+.passport-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.passport-section-header {
+  padding: 14px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.passport-section-body { padding: 0 20px; }
+
+/* ─────────────────────────────────────────────
+   MISC
+───────────────────────────────────────────── */
+.pill-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-input);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pill-tab {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.pill-tab.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.flex-row { display: flex; gap: 10px; align-items: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+.text-sage { color: var(--sage); }
+.text-amber { color: var(--amber); }
+.text-coral { color: var(--coral); }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.text-bold { font-weight: 700; }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.gap-8 { gap: 8px; }
+
+/* Loading spinner */
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--sage);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-deep);
+  z-index: 5000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─────────────────────────────────────────────
+   ANIMATIONS
+───────────────────────────────────────────── */
+.fade-in {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading-overlay">
+  <div style="font-size:48px">🏠</div>
+  <div class="spinner"></div>
+  <div>Loading BurrowKeeper…</div>
+</div>
+
+<!-- Setup Screen (no Firebase config) -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-logo">🐰</div>
+  <div class="setup-title">BurrowKeeper</div>
+  <div class="setup-tagline">Your home's long-term memory. Track assets, maintenance, warranties, and more.</div>
+
+  <!-- Cloud Sync Card -->
+  <div class="setup-card" style="max-width:480px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span style="font-size:22px">🔄</span>
+      <div class="setup-card-title" style="margin-bottom:0">Cloud Sync</div>
+      <span id="setup-sync-status" style="display:none;margin-left:auto" class="badge badge-sage">● Synced</span>
+    </div>
+    <div class="setup-card-sub">Paste your Firebase Realtime Database URL to enable sync across devices. You can skip this and set it up later in Settings.</div>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">FIREBASE DATABASE URL</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="firebase-url-input"
+          placeholder="https://your-project-rtdb.firebaseio.com"
+          style="font-size:13px"
+          oninput="onDbUrlChange(this.value)">
+        <button class="btn btn-primary" style="white-space:nowrap;flex-shrink:0" onclick="saveDbUrlAndContinue()">Save</button>
+      </div>
+    </div>
+
+    <!-- Collapsible setup guide -->
+    <details style="margin-top:4px">
+      <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary);padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-md);list-style:none;display:flex;align-items:center;gap:8px;user-select:none">
+        <span>📖</span> How to set up Firebase (free)
+        <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▼</span>
+      </summary>
+      <div style="padding:16px 4px 4px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text-inverse);flex-shrink:0">1</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Create a Firebase project</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">Go to <span style="color:var(--sage)">console.firebase.google.com</span> → Click "Add project" → Enter a name → Continue through the setup wizard.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text-inverse);flex-shrink:0">2</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Create a Realtime Database</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In your project, go to Build → Realtime Database → Click "Create Database" → Choose a region → Start in test mode.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text-inverse);flex-shrink:0">3</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Apply the security rules</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In the Realtime Database console, click the "Rules" tab → Replace the contents with the rules shown in Settings → Click "Publish".</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text-inverse);flex-shrink:0">4</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Copy your database URL</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In the Realtime Database "Data" tab, copy the URL at the top — it looks like <span style="color:var(--sage);font-family:monospace;font-size:11px">https://your-project-rtdb.firebaseio.com</span> — paste it in the field above and click Save.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text-inverse);flex-shrink:0">5</div>
+          <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Sync across devices</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">Share your Sync Key with family members. They enter it on any device to access and update your shared home data.</div></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Skip option -->
+  <button class="btn btn-ghost" style="font-size:13px;color:var(--text-muted);margin-top:4px" onclick="skipFirebaseSetup()">
+    Skip for now — set up later in Settings →
+  </button>
+</div>
+
+<!-- Sync Key Screen -->
+<div id="sync-screen" style="display:none">
+  <div class="setup-logo">🏡</div>
+  <div class="setup-title">Your Burrow</div>
+  <div class="setup-tagline">Start a new household or enter an existing Sync Key to load your home.</div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">✨ New Household</div>
+    <div class="setup-card-sub">Create a fresh home profile. You'll get a Sync Key to share with your household.</div>
+    <button class="btn btn-primary btn-block" onclick="createNewHousehold()">Create New Household</button>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">🔑 Have a Sync Key?</div>
+    <div class="setup-card-sub">Enter your key to load an existing household.</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <input class="form-input" id="sync-key-input" placeholder="ABCD-1234" maxlength="9"
+        style="text-align:center;letter-spacing:4px;font-size:22px;font-weight:800;text-transform:uppercase;font-family:monospace"
+        oninput="formatSyncKeyInput(this)">
+    </div>
+    <button class="btn btn-secondary btn-block" onclick="loadExistingHousehold()">Load Household</button>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Main App Shell -->
+<div id="app-shell" style="display:none">
+  <!-- Top Bar (mobile) -->
+  <div id="top-bar">
+    <div class="top-bar-left">
+      <div class="bk-logo-mark">🏠</div>
+      <div>
+        <div class="top-bar-title" id="top-bar-title">Dashboard</div>
+        <div class="top-bar-subtitle" id="top-bar-house-name">My Home</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="btn btn-ghost btn-icon-only" onclick="showScreen('settings')" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Left Rail (tablet) -->
+  <div id="left-rail">
+    <div class="rail-header">
+      <div class="rail-brand">
+        <div class="bk-logo-mark">🏠</div>
+        <div class="rail-brand-name">BurrowKeeper</div>
+      </div>
+      <div id="rail-house-name" class="rail-house-name">My Home</div>
+      <div class="rail-sync-badge">
+        <span>🔑</span>
+        <span id="rail-sync-key">----·----</span>
+      </div>
+    </div>
+    <nav class="rail-nav">
+      <button class="rail-nav-item active" data-screen="dashboard" onclick="showScreen('dashboard')">
+        <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+      </button>
+      <button class="rail-nav-item" data-screen="assets" onclick="showScreen('assets')">
+        <span class="nav-icon">🏗️</span><span class="nav-label">Assets</span>
+      </button>
+      <button class="rail-nav-item" data-screen="maintenance" onclick="showScreen('maintenance')">
+        <span class="nav-icon">🔧</span><span class="nav-label">Maintenance</span>
+        <span class="rail-nav-badge" id="rail-maint-badge" style="display:none">0</span>
+      </button>
+      <button class="rail-nav-item" data-screen="timeline" onclick="showScreen('timeline')">
+        <span class="nav-icon">📅</span><span class="nav-label">Timeline</span>
+      </button>
+      <button class="rail-nav-item" data-screen="contractors" onclick="showScreen('contractors')">
+        <span class="nav-icon">👷</span><span class="nav-label">Contractors</span>
+      </button>
+      <button class="rail-nav-item" data-screen="warranties" onclick="showScreen('warranties')">
+        <span class="nav-icon">📋</span><span class="nav-label">Warranties</span>
+        <span class="rail-nav-badge" id="rail-warr-badge" style="display:none">0</span>
+      </button>
+      <button class="rail-nav-item" data-screen="passport" onclick="showScreen('passport')">
+        <span class="nav-icon">📗</span><span class="nav-label">House Passport</span>
+      </button>
+    </nav>
+    <div class="rail-footer">
+      <button class="rail-nav-item" data-screen="settings" onclick="showScreen('settings')">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+
+    <!-- ══════════════════════════════════════
+         DASHBOARD SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-dashboard" class="screen active">
+      <!-- House Health Score -->
+      <div class="health-score-card fade-in">
+        <div class="health-ring-wrap">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="health-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--sage)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="79.2" style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease"/>
+          </svg>
+          <div class="health-ring-center">
+            <div class="health-score-num" id="health-score-num">70</div>
+            <div class="health-score-label">Health</div>
+          </div>
+        </div>
+        <div class="health-info">
+          <div class="health-grade" id="health-grade">🟡 Good Shape</div>
+          <ul class="health-tips" id="health-tips">
+            <li class="health-tip">Add install dates to your assets</li>
+            <li class="health-tip">Log your last HVAC service</li>
+            <li class="health-tip">Upload warranty information</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid-4 mb-16">
+        <div class="stat-widget sage">
+          <div class="stat-label">Assets</div>
+          <div class="stat-value" id="stat-assets">0</div>
+          <div class="stat-sub">Tracked</div>
+        </div>
+        <div class="stat-widget sky">
+          <div class="stat-label">Warranties</div>
+          <div class="stat-value" id="stat-warranties">0</div>
+          <div class="stat-sub">Active</div>
+        </div>
+        <div class="stat-widget amber">
+          <div class="stat-label">Due Soon</div>
+          <div class="stat-value" id="stat-due-soon">0</div>
+          <div class="stat-sub">This month</div>
+        </div>
+        <div class="stat-widget coral">
+          <div class="stat-label">Overdue</div>
+          <div class="stat-value" id="stat-overdue">0</div>
+          <div class="stat-sub">Maintenance</div>
+        </div>
+      </div>
+
+      <!-- Maintenance Overview -->
+      <div class="section-header">
+        <div class="section-title">🔔 Maintenance Alerts</div>
+        <button class="btn btn-ghost btn-sm" onclick="showScreen('maintenance')">View All</button>
+      </div>
+      <div id="dash-maintenance-alerts">
+        <div class="empty-state" style="padding:24px">
+          <div style="font-size:32px">✅</div>
+          <div class="empty-title" style="font-size:14px">All caught up!</div>
+        </div>
+      </div>
+
+      <!-- Replacement Planning -->
+      <div class="section-header">
+        <div class="section-title">🔄 Upcoming Replacements</div>
+      </div>
+      <div id="dash-replacements">
+        <div class="card" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+          Add assets with install dates to see replacement forecasts
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section-header">
+        <div class="section-title">⏱ Recent Activity</div>
+      </div>
+      <div id="dash-recent" class="card">
+        <div class="empty-state" style="padding:20px">
+          <div style="font-size:28px">📝</div>
+          <div style="font-size:13px;color:var(--text-muted)">No recent maintenance logged yet</div>
+        </div>
+      </div>
+
+      <!-- Forecast -->
+      <div class="section-header">
+        <div class="section-title">📅 5-Year Cost Forecast</div>
+      </div>
+      <div id="dash-forecast" class="card"></div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ══════════════════════════════════════
+         ASSETS SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-assets" class="screen">
+      <div class="screen-header">
+        <div class="flex-between mb-8">
+          <div class="screen-title">Assets</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddAssetModal()">+ Add Asset</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search assets…" id="asset-search" oninput="renderAssets()">
+      </div>
+
+      <div class="pill-tabs" id="asset-category-tabs">
+        <button class="pill-tab active" onclick="filterAssets('all',this)">All</button>
+        <button class="pill-tab" onclick="filterAssets('Structural',this)">Structural</button>
+        <button class="pill-tab" onclick="filterAssets('HVAC',this)">HVAC</button>
+        <button class="pill-tab" onclick="filterAssets('Plumbing',this)">Plumbing</button>
+        <button class="pill-tab" onclick="filterAssets('Electrical',this)">Electrical</button>
+        <button class="pill-tab" onclick="filterAssets('Interior',this)">Interior</button>
+        <button class="pill-tab" onclick="filterAssets('Appliances',this)">Appliances</button>
+        <button class="pill-tab" onclick="filterAssets('Yard',this)">Yard</button>
+        <button class="pill-tab" onclick="filterAssets('Custom',this)">Custom</button>
+      </div>
+
+      <div id="assets-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         MAINTENANCE SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-maintenance" class="screen">
+      <div class="screen-header">
+        <div class="flex-between mb-8">
+          <div class="screen-title">Maintenance</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddMaintenanceModal()">+ Log Entry</button>
+        </div>
+        <div class="screen-subtitle">Track service history and upcoming maintenance</div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="section-header" style="margin-top:0">
+        <div class="section-title">🔔 Reminders</div>
+      </div>
+      <div id="maintenance-reminders"></div>
+
+      <!-- Filter -->
+      <div class="section-header">
+        <div class="section-title">📋 History</div>
+        <select class="form-select" style="width:auto;font-size:12px;padding:6px 28px 6px 10px" id="maint-filter-year" onchange="renderMaintHistory()">
+          <option value="all">All Years</option>
+        </select>
+      </div>
+      <div id="maintenance-history"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TIMELINE SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-timeline" class="screen">
+      <div class="screen-header">
+        <div class="screen-title">Timeline</div>
+        <div class="screen-subtitle">Your home's complete history and future</div>
+      </div>
+
+      <div class="pill-tabs">
+        <button class="pill-tab active" onclick="filterTimeline('all',this)">All</button>
+        <button class="pill-tab" onclick="filterTimeline('past',this)">History</button>
+        <button class="pill-tab" onclick="filterTimeline('future',this)">Future</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 20px" id="timeline-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         CONTRACTORS SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-contractors" class="screen">
+      <div class="screen-header">
+        <div class="flex-between mb-8">
+          <div class="screen-title">Contractors</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddContractorModal()">+ Add</button>
+        </div>
+        <div class="screen-subtitle">Your trusted service providers</div>
+      </div>
+
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search contractors…" id="contractor-search" oninput="renderContractors()">
+      </div>
+
+      <div id="contractors-list"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         WARRANTIES SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-warranties" class="screen">
+      <div class="screen-header">
+        <div class="flex-between mb-8">
+          <div class="screen-title">Warranties</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddWarrantyModal()">+ Add</button>
+        </div>
+      </div>
+
+      <div class="pill-tabs">
+        <button class="pill-tab active" onclick="filterWarranties('all',this)">All</button>
+        <button class="pill-tab" onclick="filterWarranties('active',this)">Active</button>
+        <button class="pill-tab" onclick="filterWarranties('expiring',this)">Expiring Soon</button>
+        <button class="pill-tab" onclick="filterWarranties('expired',this)">Expired</button>
+      </div>
+
+      <div id="warranties-list"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PASSPORT SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-passport" class="screen">
+      <div class="screen-header">
+        <div class="flex-between mb-8">
+          <div class="screen-title">🏠 House Passport</div>
+          <button class="btn btn-secondary btn-sm" onclick="exportPassport()">Export</button>
+        </div>
+        <div class="screen-subtitle">Complete ownership record</div>
+      </div>
+      <div id="passport-content"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SETTINGS SCREEN
+    ══════════════════════════════════════ -->
+    <div id="screen-settings" class="screen">
+      <div class="screen-header">
+        <div class="screen-title">Settings</div>
+      </div>
+
+      <!-- Home Profile -->
+      <div class="section-header" style="margin-top:0">
+        <div class="section-title">🏡 Home Profile</div>
+      </div>
+      <div class="card mb-16">
+        <div class="form-group">
+          <label class="form-label">Household Name</label>
+          <input class="form-input" id="s-household-name" placeholder="The Smith Residence">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Property Address</label>
+          <input class="form-input" id="s-address" placeholder="123 Maple Street, Springfield, PA">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Year Built</label>
+            <input class="form-input" type="number" id="s-year-built" placeholder="1967">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input class="form-input" id="s-state" placeholder="Pennsylvania">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Bedrooms</label>
+            <input class="form-input" type="number" id="s-beds" placeholder="3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bathrooms</label>
+            <input class="form-input" type="number" step="0.5" id="s-baths" placeholder="2.5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Square Footage</label>
+            <input class="form-input" type="number" id="s-sqft" placeholder="2387">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Home Value</label>
+            <input class="form-input" type="number" id="s-value" placeholder="600000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Purchase Date</label>
+            <input class="form-input" type="date" id="s-purchase-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purchase Price</label>
+            <input class="form-input" type="number" id="s-purchase-price" placeholder="550000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" id="s-notes" placeholder="Additional notes about the property…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveHomeProfile()">Save Profile</button>
+      </div>
+
+      <!-- Appearance -->
+      <div class="section-header">
+        <div class="section-title">🎨 Appearance</div>
+      </div>
+      <div class="card mb-16">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Theme</label>
+          <select class="form-select" id="s-theme" onchange="applyTheme(this.value)">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="system">System</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Sync -->
+      <div class="section-header">
+        <div class="section-title">🔄 Sync & Backup</div>
+      </div>
+      <div class="card mb-16">
+        <div class="form-group">
+          <label class="form-label">Your Sync Key</label>
+          <div class="sync-key-display" id="s-sync-key-display">------</div>
+          <div class="flex-row gap-8 mt-4">
+            <button class="btn btn-secondary btn-sm" onclick="copySyncKey()">📋 Copy</button>
+            <button class="btn btn-ghost btn-sm" onclick="confirmGenerateNewKey()">Generate New Key</button>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="form-group">
+          <label class="form-label">Load Different Household</label>
+          <div class="flex-row">
+            <input class="form-input" id="s-load-key" placeholder="ABCD-1234" maxlength="9"
+              style="text-transform:uppercase;letter-spacing:3px;font-family:monospace"
+              oninput="formatSyncKeyInput(this)">
+            <button class="btn btn-secondary" onclick="loadHouseholdFromSettings()">Load</button>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="flex-row" style="flex-wrap:wrap;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="exportJSON()">📤 Export JSON</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📊 Export CSV</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+            📥 Import JSON
+            <input type="file" accept=".json" onchange="importJSON(event)" style="display:none">
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
+          Last sync: <span id="last-sync-time">Never</span>
+        </div>
+      </div>
+
+      <!-- Firebase Setup -->
+      <div class="section-header">
+        <div class="section-title">🔥 Cloud Sync</div>
+      </div>
+      <div class="card mb-16">
+        <!-- Status + URL input -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:20px">🔄</span>
+          <span style="font-size:15px;font-weight:700">Firebase Database</span>
+          <span id="settings-sync-status" class="badge" style="margin-left:auto"></span>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">FIREBASE DATABASE URL</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" id="s-db-url" placeholder="https://your-project-rtdb.firebaseio.com" style="font-size:13px">
+            <button class="btn btn-primary" style="white-space:nowrap;flex-shrink:0" onclick="saveDbUrlFromSettings()">Save</button>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Security Rules -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-secondary)">SECURITY RULES TO PASTE</div>
+          <button class="btn btn-secondary btn-sm" onclick="copySecurityRules()">📋 Copy Rules</button>
+        </div>
+        <div id="security-rules-display" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;font-family:'SF Mono',monospace;font-size:11px;color:var(--text-secondary);line-height:1.7;white-space:pre;overflow-x:auto;margin-bottom:8px">{
+  "rules": {
+    "homes": {
+      "$syncKey": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}</div>
+        <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:flex-start;gap:6px">
+          <span>⚡</span>
+          <span>In your Firebase console → Realtime Database → Rules tab → Replace contents with the above → Publish.</span>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Numbered setup steps -->
+        <details>
+          <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary);list-style:none;display:flex;align-items:center;gap:6px;user-select:none;padding:4px 0">
+            <span>📖</span> How to set up Firebase (free)
+            <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▼</span>
+          </summary>
+          <div style="padding:14px 0 4px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:24px;height:24px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-inverse);flex-shrink:0">1</div>
+              <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Create a Firebase project</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">Go to <span style="color:var(--sage)">console.firebase.google.com</span> → Click "Add project" → Enter a name (e.g. "BurrowKeeper") → Continue through the setup wizard.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:24px;height:24px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-inverse);flex-shrink:0">2</div>
+              <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Create a Realtime Database</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In your project, go to Build → Realtime Database → Click "Create Database" → Choose a region → Start in test mode (we'll add proper rules next).</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:24px;height:24px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-inverse);flex-shrink:0">3</div>
+              <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Apply the security rules</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In the Realtime Database console, click the "Rules" tab → Replace the contents with the rules shown above → Click "Publish".</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:24px;height:24px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-inverse);flex-shrink:0">4</div>
+              <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Copy your database URL</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">In the Realtime Database "Data" tab, copy the URL at the top — it looks like <span style="color:var(--sage);font-family:monospace;font-size:11px">https://your-project-rtdb.firebaseio.com</span> — paste it in the field above and click Save.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:24px;height:24px;background:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-inverse);flex-shrink:0">5</div>
+              <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">Sync across devices</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.5">Share your Household Sync Key with family members. They enter it on any device to access and update your shared home data.</div></div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="section-header">
+        <div class="section-title">⚠️ Danger Zone</div>
+      </div>
+      <div class="card mb-16" style="border-color:var(--coral-dim)">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Permanently clear all local data. This does not affect synced data in Firebase.</div>
+        <button class="btn btn-danger btn-sm" onclick="confirmReset()">Reset Local Data</button>
+      </div>
+
+      <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:24px 0;padding-bottom:40px">
+        BurrowKeeper 1.0 · Your home's long-term memory 🐰
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+
+  <!-- Bottom Nav (mobile) -->
+  <nav id="bottom-nav">
+    <button class="nav-tab active" data-screen="dashboard" onclick="showScreen('dashboard')">
+      <span class="nav-icon">📊</span><span>Home</span>
+    </button>
+    <button class="nav-tab" data-screen="assets" onclick="showScreen('assets')">
+      <span class="nav-icon">🏗️</span><span>Assets</span>
+    </button>
+    <button class="nav-tab" data-screen="maintenance" onclick="showScreen('maintenance')">
+      <span class="nav-icon">🔧</span><span>Maintain</span>
+      <span class="nav-badge" id="nav-maint-badge" style="display:none">!</span>
+    </button>
+    <button class="nav-tab" data-screen="timeline" onclick="showScreen('timeline')">
+      <span class="nav-icon">📅</span><span>Timeline</span>
+    </button>
+    <button class="nav-tab" data-screen="settings" onclick="showScreen('settings')">
+      <span class="nav-icon">⚙️</span><span>Settings</span>
+    </button>
+  </nav>
+</div><!-- /app-shell -->
+
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- Add/Edit Asset Modal -->
+<div class="modal-overlay" id="asset-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="asset-modal-title">Add Asset</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('asset-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="am-id">
+      <div class="form-group">
+        <label class="form-label">Asset Name *</label>
+        <input class="form-input" id="am-name" placeholder="e.g., Roof, Furnace, Water Heater">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="am-category">
+            <option value="Structural">Structural</option>
+            <option value="HVAC">HVAC</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Interior">Interior</option>
+            <option value="Appliances">Appliances</option>
+            <option value="Yard">Yard</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Expected Lifespan (yrs)</label>
+          <input class="form-input" type="number" id="am-lifespan" placeholder="20">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Install Date</label>
+          <input class="form-input" type="date" id="am-install-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Est. Replacement Cost</label>
+          <input class="form-input" type="number" id="am-replacement-cost" placeholder="5000">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Last Maintenance</label>
+          <input class="form-input" type="date" id="am-last-maint">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Next Maintenance Due</label>
+          <input class="form-input" type="date" id="am-next-maint">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Warranty Expiration</label>
+          <input class="form-input" type="date" id="am-warranty-exp">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Replacement Year</label>
+          <input class="form-input" type="number" id="am-replacement-year" placeholder="2038">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="am-notes" placeholder="Model number, brand, installer, any notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="saveAsset()">Save Asset</button>
+      <button class="btn btn-secondary" onclick="closeModal('asset-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Asset Detail Modal -->
+<div class="modal-overlay" id="asset-detail-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="adm-title">Asset Detail</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('asset-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="asset-detail-body"></div>
+    <div class="modal-footer" id="asset-detail-footer"></div>
+  </div>
+</div>
+
+<!-- Maintenance Log Modal -->
+<div class="modal-overlay" id="maint-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="mm-title">Log Maintenance</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('maint-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mm-id">
+      <div class="form-group">
+        <label class="form-label">Asset *</label>
+        <select class="form-select" id="mm-asset"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input class="form-input" type="date" id="mm-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cost</label>
+          <input class="form-input" type="number" id="mm-cost" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maintenance Type</label>
+        <select class="form-select" id="mm-type">
+          <option value="Inspection">Inspection</option>
+          <option value="Service">Service</option>
+          <option value="Repair">Repair</option>
+          <option value="Replacement">Replacement</option>
+          <option value="Installation">Installation</option>
+          <option value="Cleaning">Cleaning</option>
+          <option value="Upgrade">Upgrade</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contractor</label>
+        <select class="form-select" id="mm-contractor">
+          <option value="">None / DIY</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="mm-notes" placeholder="What was done, any findings…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="saveMaintenance()">Save Entry</button>
+      <button class="btn btn-secondary" onclick="closeModal('maint-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contractor Modal -->
+<div class="modal-overlay" id="contractor-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="cm-title">Add Contractor</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('contractor-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cm-id">
+      <div class="form-group">
+        <label class="form-label">Company Name *</label>
+        <input class="form-input" id="cm-company" placeholder="ABC Plumbing Co.">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Contact Person</label>
+          <input class="form-input" id="cm-contact" placeholder="John Smith">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Service Category</label>
+          <select class="form-select" id="cm-category">
+            <option value="Plumbing">Plumbing</option>
+            <option value="HVAC">HVAC</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Roofing">Roofing</option>
+            <option value="Landscaping">Landscaping</option>
+            <option value="General">General Contractor</option>
+            <option value="Appliance">Appliance Repair</option>
+            <option value="Painting">Painting</option>
+            <option value="Pest Control">Pest Control</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" type="tel" id="cm-phone" placeholder="(555) 123-4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="cm-email" placeholder="contact@company.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Website</label>
+        <input class="form-input" type="url" id="cm-website" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="cm-notes" placeholder="License number, referral, quality notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="saveContractor()">Save Contractor</button>
+      <button class="btn btn-secondary" onclick="closeModal('contractor-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Warranty Modal -->
+<div class="modal-overlay" id="warranty-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="wm-title">Add Warranty</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('warranty-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="wm-id">
+      <div class="form-group">
+        <label class="form-label">Asset</label>
+        <select class="form-select" id="wm-asset"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Warranty Provider *</label>
+        <input class="form-input" id="wm-provider" placeholder="Manufacturer or provider name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input class="form-input" type="date" id="wm-start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Expiration Date *</label>
+          <input class="form-input" type="date" id="wm-exp">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Coverage Notes</label>
+        <textarea class="form-textarea" id="wm-notes" placeholder="What's covered, claim process, contact info…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="saveWarranty()">Save Warranty</button>
+      <button class="btn btn-secondary" onclick="closeModal('warranty-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="confirm-title">Confirm</span>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" style="font-size:14px;color:var(--text-secondary);line-height:1.6"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" style="flex:1" id="confirm-btn" onclick="">Confirm</button>
+      <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update Firebase URL Modal -->
+<div class="modal-overlay" id="firebase-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">Update Firebase URL</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('firebase-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Firebase Database URL</label>
+        <input class="form-input" id="firebase-update-input" placeholder="https://your-project-rtdb.firebaseio.com" style="font-size:13px">
+        <div class="form-hint" style="margin-top:6px">Find this in Firebase Console → Realtime Database → Data tab</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="updateFirebaseUrl()">Save & Reconnect</button>
+      <button class="btn btn-secondary" onclick="closeModal('firebase-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  BURROWKEEPER — Main Application Script
+// ═══════════════════════════════════════════════════════════════
+
+// ─── State ───────────────────────────────────────────────────
+const APP = {
+  db: null,
+  syncKey: null,
+  currentScreen: 'dashboard',
+  assetFilter: 'all',
+  timelineFilter: 'all',
+  warrantyFilter: 'all',
+  data: {
+    profile: {},
+    assets: {},
+    maintenance: {},
+    contractors: {},
+    warranties: {},
+    settings: {}
+  }
+};
+
+// ─── Default Profile ─────────────────────────────────────────
+const DEFAULT_PROFILE = {
+  householdName: 'My Home',
+  address: '',
+  yearBuilt: 1967,
+  bedrooms: 3,
+  bathrooms: 2.5,
+  sqft: 2387,
+  homeValue: 600000,
+  state: 'Pennsylvania',
+  purchaseDate: '',
+  purchasePrice: '',
+  notes: ''
+};
+
+// ─── Asset Templates ─────────────────────────────────────────
+const ASSET_TEMPLATES = [
+  // Structural
+  { name:'Roof', category:'Structural', lifespan:25, replacementCost:15000, maintenanceYears:5 },
+  { name:'Gutters', category:'Structural', lifespan:20, replacementCost:2500, maintenanceYears:1 },
+  { name:'Siding', category:'Structural', lifespan:40, replacementCost:18000, maintenanceYears:5 },
+  { name:'Exterior Paint', category:'Structural', lifespan:8, replacementCost:4000, maintenanceYears:8 },
+  { name:'Chimney', category:'Structural', lifespan:50, replacementCost:6000, maintenanceYears:3 },
+  { name:'Foundation', category:'Structural', lifespan:100, replacementCost:30000, maintenanceYears:10 },
+  { name:'Deck', category:'Structural', lifespan:20, replacementCost:12000, maintenanceYears:2 },
+  { name:'Fence', category:'Structural', lifespan:15, replacementCost:5000, maintenanceYears:3 },
+  { name:'Driveway', category:'Structural', lifespan:25, replacementCost:8000, maintenanceYears:5 },
+  { name:'Garage Door', category:'Structural', lifespan:20, replacementCost:2500, maintenanceYears:2 },
+  // HVAC
+  { name:'Furnace', category:'HVAC', lifespan:20, replacementCost:5000, maintenanceYears:1 },
+  { name:'Air Conditioner', category:'HVAC', lifespan:15, replacementCost:4500, maintenanceYears:1 },
+  { name:'Heat Pump', category:'HVAC', lifespan:15, replacementCost:5500, maintenanceYears:1 },
+  { name:'Boiler', category:'HVAC', lifespan:25, replacementCost:6000, maintenanceYears:1 },
+  { name:'Ductwork', category:'HVAC', lifespan:30, replacementCost:8000, maintenanceYears:5 },
+  // Plumbing
+  { name:'Water Heater', category:'Plumbing', lifespan:12, replacementCost:1800, maintenanceYears:2 },
+  { name:'Water Softener', category:'Plumbing', lifespan:15, replacementCost:1500, maintenanceYears:1 },
+  { name:'Sump Pump', category:'Plumbing', lifespan:10, replacementCost:800, maintenanceYears:2 },
+  { name:'Sewer Line', category:'Plumbing', lifespan:50, replacementCost:10000, maintenanceYears:10 },
+  { name:'Main Water Line', category:'Plumbing', lifespan:50, replacementCost:8000, maintenanceYears:10 },
+  // Electrical
+  { name:'Electrical Panel', category:'Electrical', lifespan:40, replacementCost:3500, maintenanceYears:10 },
+  { name:'Generator', category:'Electrical', lifespan:20, replacementCost:5000, maintenanceYears:1 },
+  { name:'Smoke Detectors', category:'Electrical', lifespan:10, replacementCost:300, maintenanceYears:1 },
+  { name:'Carbon Monoxide Detectors', category:'Electrical', lifespan:7, replacementCost:200, maintenanceYears:1 },
+  // Interior
+  { name:'Windows', category:'Interior', lifespan:25, replacementCost:12000, maintenanceYears:5 },
+  { name:'Doors', category:'Interior', lifespan:30, replacementCost:3000, maintenanceYears:10 },
+  { name:'Flooring', category:'Interior', lifespan:20, replacementCost:10000, maintenanceYears:5 },
+  { name:'Kitchen', category:'Interior', lifespan:25, replacementCost:35000, maintenanceYears:10 },
+  { name:'Bathrooms', category:'Interior', lifespan:20, replacementCost:15000, maintenanceYears:10 },
+  // Appliances
+  { name:'Refrigerator', category:'Appliances', lifespan:15, replacementCost:1500, maintenanceYears:5 },
+  { name:'Dishwasher', category:'Appliances', lifespan:12, replacementCost:900, maintenanceYears:3 },
+  { name:'Range / Oven', category:'Appliances', lifespan:15, replacementCost:1200, maintenanceYears:3 },
+  { name:'Microwave', category:'Appliances', lifespan:10, replacementCost:400, maintenanceYears:5 },
+  { name:'Washer', category:'Appliances', lifespan:12, replacementCost:900, maintenanceYears:3 },
+  { name:'Dryer', category:'Appliances', lifespan:13, replacementCost:800, maintenanceYears:3 },
+  // Yard
+  { name:'Trees', category:'Yard', lifespan:100, replacementCost:2000, maintenanceYears:2 },
+  { name:'Landscaping', category:'Yard', lifespan:10, replacementCost:5000, maintenanceYears:1 },
+  { name:'Irrigation System', category:'Yard', lifespan:20, replacementCost:3000, maintenanceYears:1 }
+];
+
+// ─── Category Icons ──────────────────────────────────────────
+const CAT_ICONS = {
+  Structural:'🏗️', HVAC:'🌡️', Plumbing:'🚿', Electrical:'⚡',
+  Interior:'🛋️', Appliances:'🍳', Yard:'🌿', Custom:'⚙️'
+};
+
+const MAINT_TYPE_ICONS = {
+  Inspection:'🔍', Service:'🔧', Repair:'🛠️', Replacement:'🔄',
+  Installation:'📦', Cleaning:'🧹', Upgrade:'⬆️', Other:'📝'
+};
+
+// ─────────────────────────────────────────────────────────────
+//  FIREBASE INIT
+// ─────────────────────────────────────────────────────────────
+function initFirebaseFromUrl(url) {
+  if (!url || !url.includes('firebaseio.com')) return false;
+  const config = { databaseURL: url.trim() };
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+    APP.db = firebase.database();
+    localStorage.setItem('bk_firebase_url', url.trim());
+    return true;
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    return false;
+  }
+}
+
+function onDbUrlChange(val) {
+  // Live feedback while typing on setup screen
+  const status = document.getElementById('setup-sync-status');
+  if (!status) return;
+  if (val.includes('firebaseio.com')) {
+    status.style.display = 'inline-flex';
+    status.className = 'badge badge-sage';
+    status.textContent = '● Ready';
+  } else if (val.length > 5) {
+    status.style.display = 'inline-flex';
+    status.className = 'badge badge-coral';
+    status.textContent = '✕ Invalid URL';
+  } else {
+    status.style.display = 'none';
+  }
+}
+
+function saveDbUrlAndContinue() {
+  const url = document.getElementById('firebase-url-input').value.trim();
+  if (!url) {
+    showToast('❌ Enter your database URL first');
+    return;
+  }
+  if (!url.includes('firebaseio.com')) {
+    showToast('❌ URL should end in .firebaseio.com');
+    return;
+  }
+  localStorage.setItem('bk_firebase_url', url);
+  showToast('✅ Database URL saved — continuing…');
+  setTimeout(() => window.location.reload(), 800);
+}
+
+function skipFirebaseSetup() {
+  // Mark that user has seen setup so we don't show it again on reload
+  localStorage.setItem('bk_firebase_skipped', '1');
+  document.getElementById('setup-screen').style.display = 'none';
+  // Now check for sync key
+  const storedKey = localStorage.getItem('bk_sync_key');
+  if (!storedKey) {
+    document.getElementById('sync-screen').style.display = 'flex';
+  } else {
+    APP.syncKey = storedKey;
+    startApp();
+  }
+}
+
+function saveDbUrlFromSettings() {
+  const url = document.getElementById('s-db-url').value.trim();
+  if (!url) {
+    // Allow clearing
+    localStorage.removeItem('bk_firebase_url');
+    updateSettingsSyncStatus(false);
+    showToast('🔌 Firebase disconnected');
+    return;
+  }
+  if (!url.includes('firebaseio.com')) {
+    showToast('❌ URL should look like https://your-project-rtdb.firebaseio.com');
+    return;
+  }
+  localStorage.setItem('bk_firebase_url', url);
+  showToast('✅ Saved — reconnecting…');
+  setTimeout(() => window.location.reload(), 800);
+}
+
+function updateFirebaseUrl() {
+  const url = document.getElementById('firebase-update-input').value.trim();
+  if (!url.includes('firebaseio.com')) {
+    showToast('❌ Invalid Firebase URL');
+    return;
+  }
+  localStorage.setItem('bk_firebase_url', url);
+  showToast('✅ URL updated — reloading…');
+  setTimeout(() => window.location.reload(), 800);
+}
+
+// Legacy — kept for backward compat but redirects to URL-based flow
+function initFirebaseFromInput() { saveDbUrlAndContinue(); }
+function updateFirebaseConfig() { updateFirebaseUrl(); }
+function openUpdateFirebaseModal() {
+  const url = localStorage.getItem('bk_firebase_url') || '';
+  document.getElementById('firebase-update-input').value = url;
+  openModal('firebase-modal');
+}
+
+function updateSettingsSyncStatus(connected) {
+  const el = document.getElementById('settings-sync-status');
+  if (!el) return;
+  if (connected) {
+    el.className = 'badge badge-sage';
+    el.textContent = '● Connected';
+  } else {
+    el.className = 'badge badge-coral';
+    el.textContent = '○ Not connected';
+  }
+}
+
+function copySecurityRules() {
+  const rules = `{
+  "rules": {
+    "homes": {
+      "$syncKey": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(rules);
+    showToast('📋 Security rules copied!');
+  } else {
+    showToast('Rules: see the Settings panel');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SYNC KEY MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+function generateSyncKey() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const L = () => letters[Math.floor(Math.random() * 26)];
+  const D = () => digits[Math.floor(Math.random() * 10)];
+  return `${L()}${L()}${L()}${L()}-${D()}${D()}${D()}${D()}`;
+}
+
+function formatSyncKeyInput(input) {
+  // Allow ABCD-1234 format: 4 uppercase letters, dash, 4 digits
+  let val = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  // Auto-insert dash after 4 letters
+  if (val.length > 4 && val[4] !== '-') {
+    val = val.slice(0, 4) + '-' + val.slice(4);
+  }
+  // Strip extra dash if they type one
+  val = val.replace(/--+/g, '-');
+  // Max length: ABCD-1234 = 9 chars
+  if (val.length > 9) val = val.slice(0, 9);
+  input.value = val;
+}
+
+function isValidSyncKey(key) {
+  return /^[A-Z]{4}-[0-9]{4}$/.test(key);
+}
+
+async function createNewHousehold() {
+  const key = generateSyncKey();
+  APP.syncKey = key;
+  localStorage.setItem('bk_sync_key', key);
+  await seedDefaultData();
+  startApp();
+}
+
+async function loadExistingHousehold() {
+  const key = document.getElementById('sync-key-input').value.trim().toUpperCase();
+  if (!isValidSyncKey(key)) {
+    showToast('❌ Enter a valid key (e.g. ABCD-1234)');
+    return;
+  }
+  APP.syncKey = key;
+  localStorage.setItem('bk_sync_key', key);
+  startApp();
+}
+
+async function loadHouseholdFromSettings() {
+  const key = document.getElementById('s-load-key').value.trim().toUpperCase();
+  if (!isValidSyncKey(key)) {
+    showToast('❌ Enter a valid key (e.g. ABCD-1234)');
+    return;
+  }
+  APP.syncKey = key;
+  localStorage.setItem('bk_sync_key', key);
+  showToast('🔄 Loading household…');
+  setTimeout(() => window.location.reload(), 800);
+}
+
+function confirmGenerateNewKey() {
+  showConfirm(
+    'Generate New Sync Key?',
+    'This will create a new household with your current data. Your old Sync Key will still point to the old household.',
+    async () => {
+      const key = generateSyncKey();
+      APP.syncKey = key;
+      localStorage.setItem('bk_sync_key', key);
+      await saveAllToFirebase();
+      updateSyncKeyDisplay();
+      showToast('✅ New Sync Key generated');
+      closeModal('confirm-modal');
+    }
+  );
+}
+
+function copySyncKey() {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(APP.syncKey);
+    showToast('📋 Sync Key copied!');
+  } else {
+    showToast('Sync Key: ' + APP.syncKey);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FIREBASE DATA OPERATIONS
+// ─────────────────────────────────────────────────────────────
+function dbRef(path) {
+  return APP.db.ref(`homes/${APP.syncKey}/${path}`);
+}
+
+async function loadFromFirebase() {
+  try {
+    const snap = await dbRef('').once('value');
+    const remote = snap.val();
+    if (remote) {
+      APP.data.profile = remote.profile || {};
+      APP.data.assets = remote.assets || {};
+      APP.data.maintenance = remote.maintenance || {};
+      APP.data.contractors = remote.contractors || {};
+      APP.data.warranties = remote.warranties || {};
+      APP.data.settings = remote.settings || {};
+      localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    }
+    updateLastSync();
+  } catch(e) {
+    console.warn('Firebase load failed, using local data:', e);
+  }
+}
+
+async function saveToFirebase(path, data) {
+  if (!APP.db) return;
+  try {
+    await dbRef(path).set(data);
+    updateLastSync();
+  } catch(e) {
+    console.warn('Firebase save failed:', e);
+  }
+}
+
+async function saveAllToFirebase() {
+  if (!APP.db) return;
+  try {
+    await dbRef('').set(APP.data);
+    updateLastSync();
+  } catch(e) {
+    console.warn('Firebase save failed:', e);
+  }
+}
+
+function listenToFirebase() {
+  if (!APP.db) return;
+  dbRef('').on('value', (snap) => {
+    const remote = snap.val();
+    if (remote) {
+      APP.data.profile = remote.profile || APP.data.profile;
+      APP.data.assets = remote.assets || APP.data.assets;
+      APP.data.maintenance = remote.maintenance || APP.data.maintenance;
+      APP.data.contractors = remote.contractors || APP.data.contractors;
+      APP.data.warranties = remote.warranties || APP.data.warranties;
+      APP.data.settings = remote.settings || APP.data.settings;
+      localStorage.setItem('bk_data', JSON.stringify(APP.data));
+      updateLastSync();
+      refreshCurrentScreen();
+    }
+  });
+}
+
+function updateLastSync() {
+  const now = new Date().toLocaleString();
+  localStorage.setItem('bk_last_sync', now);
+  const el = document.getElementById('last-sync-time');
+  if (el) el.textContent = now;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DEFAULT DATA SEED
+// ─────────────────────────────────────────────────────────────
+async function seedDefaultData() {
+  APP.data.profile = { ...DEFAULT_PROFILE };
+  APP.data.assets = {};
+  APP.data.maintenance = {};
+  APP.data.contractors = {};
+  APP.data.warranties = {};
+  APP.data.settings = { theme: 'dark' };
+
+  // Seed asset templates — key milestone install years for a 1967 PA home
+  const seedYear = (category) => {
+    const yearBuilt = 1967;
+    const current = new Date().getFullYear();
+    // Return a plausible recent install year
+    const age = Math.floor(Math.random() * 8) + 2;
+    return String(current - age);
+  };
+
+  ASSET_TEMPLATES.forEach((t, i) => {
+    const id = 'asset_' + Date.now() + '_' + i;
+    const installYear = seedYear(t.category);
+    const installDate = installYear + '-01-01';
+    const replacementYear = (parseInt(installYear) + t.lifespan).toString();
+    APP.data.assets[id] = {
+      name: t.name,
+      category: t.category,
+      lifespan: t.lifespan,
+      replacementCost: t.replacementCost,
+      installDate,
+      replacementYear,
+      lastMaint: '',
+      nextMaint: '',
+      warrantyExp: '',
+      contractorId: '',
+      notes: '',
+      archived: false
+    };
+  });
+
+  await saveAllToFirebase();
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+}
+
+// ─────────────────────────────────────────────────────────────
+//  APP STARTUP
+// ─────────────────────────────────────────────────────────────
+async function startApp() {
+  // Load local cache first
+  const cached = localStorage.getItem('bk_data');
+  if (cached) {
+    try { Object.assign(APP.data, JSON.parse(cached)); } catch(e) {}
+  }
+
+  // Load from Firebase (overwrites if fresher)
+  if (APP.db) {
+    await loadFromFirebase();
+    listenToFirebase();
+  }
+
+  document.getElementById('loading-overlay').style.display = 'none';
+  document.getElementById('sync-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'flex';
+
+  applyTheme(APP.data.settings?.theme || 'dark');
+  updateSyncKeyDisplay();
+  loadProfileIntoSettings();
+  showScreen('dashboard');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────────────
+const SCREEN_TITLES = {
+  dashboard:'Dashboard', assets:'Assets', maintenance:'Maintenance',
+  timeline:'Timeline', contractors:'Contractors', warranties:'Warranties',
+  passport:'House Passport', settings:'Settings'
+};
+
+function showScreen(name) {
+  APP.currentScreen = name;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const s = document.getElementById('screen-' + name);
+  if (s) s.classList.add('active');
+
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll(`[data-screen="${name}"]`).forEach(t => t.classList.add('active'));
+
+  const title = document.getElementById('top-bar-title');
+  if (title) title.textContent = SCREEN_TITLES[name] || name;
+
+  const hname = APP.data.profile?.householdName || 'My Home';
+  const hn = document.getElementById('top-bar-house-name');
+  if (hn) hn.textContent = hname;
+
+  refreshCurrentScreen();
+  window.scrollTo && window.scrollTo(0,0);
+  document.getElementById('main-content')?.scrollTo(0,0);
+}
+
+function refreshCurrentScreen() {
+  const name = APP.currentScreen;
+  if (name === 'dashboard') renderDashboard();
+  else if (name === 'assets') renderAssets();
+  else if (name === 'maintenance') renderMaintenance();
+  else if (name === 'timeline') renderTimeline();
+  else if (name === 'contractors') renderContractors();
+  else if (name === 'warranties') renderWarranties();
+  else if (name === 'passport') renderPassport();
+  updateBadges();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UTILITIES
+// ─────────────────────────────────────────────────────────────
+function uid() { return 'bk_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function fmt$$(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try {
+    const dt = new Date(d + (d.includes('T') ? '' : 'T12:00:00'));
+    return dt.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  } catch { return d; }
+}
+
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function assetAge(asset) {
+  if (!asset.installDate) return null;
+  const years = (Date.now() - new Date(asset.installDate + 'T12:00:00').getTime()) / (365.25 * 86400000);
+  return Math.max(0, years);
+}
+
+function assetHealthStatus(asset) {
+  const age = assetAge(asset);
+  const life = asset.lifespan || 20;
+  if (age === null) return { label:'Unknown', cls:'good', pct:50 };
+  const pct = Math.min(100, (age / life) * 100);
+  if (pct < 25) return { label:'Excellent', cls:'excellent', pct };
+  if (pct < 50) return { label:'Good', cls:'good', pct };
+  if (pct < 70) return { label:'Fair', cls:'fair', pct };
+  if (pct < 90) return { label:'Aging', cls:'aging', pct };
+  return { label:'Replace Soon', cls:'replace', pct:100 };
+}
+
+function lifeBarColor(pct) {
+  if (pct < 25) return 'var(--status-excellent)';
+  if (pct < 50) return 'var(--status-good)';
+  if (pct < 70) return 'var(--status-fair)';
+  if (pct < 90) return 'var(--status-aging)';
+  return 'var(--status-replace)';
+}
+
+function activeAssets() {
+  return Object.entries(APP.data.assets || {})
+    .filter(([,a]) => !a.archived)
+    .map(([id,a]) => ({...a, id}));
+}
+
+function allMaintenance() {
+  return Object.entries(APP.data.maintenance || {})
+    .map(([id,m]) => ({...m, id}))
+    .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+}
+
+function allContractors() {
+  return Object.entries(APP.data.contractors || {})
+    .map(([id,c]) => ({...c, id}))
+    .sort((a,b) => (a.company||'').localeCompare(b.company||''));
+}
+
+function allWarranties() {
+  return Object.entries(APP.data.warranties || {})
+    .map(([id,w]) => ({...w, id}))
+    .sort((a,b) => (a.expDate||'').localeCompare(b.expDate||''));
+}
+
+function getContractorName(id) {
+  const c = APP.data.contractors?.[id];
+  return c?.company || '';
+}
+
+function getAssetName(id) {
+  const a = APP.data.assets?.[id];
+  return a?.name || 'Unknown Asset';
+}
+
+function maintenanceDue() {
+  const today = new Date().toISOString().slice(0,10);
+  const in30 = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
+  return activeAssets().filter(a => a.nextMaint && a.nextMaint <= in30);
+}
+
+function overdueItems() {
+  const today = new Date().toISOString().slice(0,10);
+  return activeAssets().filter(a => a.nextMaint && a.nextMaint < today);
+}
+
+function warrantiesExpiringSoon() {
+  const today = new Date().toISOString().slice(0,10);
+  const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
+  return allWarranties().filter(w => w.expDate && w.expDate > today && w.expDate <= in90);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HEALTH SCORE CALCULATION
+// ─────────────────────────────────────────────────────────────
+function calcHealthScore() {
+  const assets = activeAssets();
+  if (assets.length === 0) return { score: 0, grade: '🔴 No Data', tips: ['Start by adding your home\'s assets'], color: 'var(--coral)' };
+
+  let score = 0;
+  const tips = [];
+
+  // Coverage: penalize missing install dates
+  const withDates = assets.filter(a => a.installDate).length;
+  const datePct = withDates / assets.length;
+  score += datePct * 25;
+  if (datePct < 0.8) tips.push('Add install dates to ' + (assets.length - withDates) + ' assets');
+
+  // Maintenance currency
+  const today = new Date().toISOString().slice(0,10);
+  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today).length;
+  const maintScore = Math.max(0, 25 - (overdue * 5));
+  score += maintScore;
+  if (overdue > 0) tips.push(overdue + ' maintenance item' + (overdue>1?'s are':' is') + ' overdue');
+
+  // Warranty coverage
+  const withWarranty = assets.filter(a => {
+    const w = Object.values(APP.data.warranties||{}).find(ww => ww.assetId === a.id);
+    return w && w.expDate > today;
+  }).length;
+  const wPct = assets.length > 0 ? withWarranty / Math.min(assets.length, 10) : 0;
+  score += Math.min(25, wPct * 25);
+  if (wPct < 0.3) tips.push('Add warranty records for key assets');
+
+  // Asset age health
+  const healthyCount = assets.filter(a => {
+    const s = assetHealthStatus(a);
+    return ['excellent','good'].includes(s.cls);
+  }).length;
+  const agePct = healthyCount / assets.length;
+  score += agePct * 25;
+  const aging = assets.filter(a => ['aging','replace'].includes(assetHealthStatus(a).cls));
+  if (aging.length > 0) tips.push('Review aging: ' + aging.slice(0,2).map(a=>a.name).join(', '));
+
+  const s = Math.round(Math.min(100, score));
+  let grade, color;
+  if (s >= 85) { grade = '🟢 Excellent'; color = 'var(--status-excellent)'; }
+  else if (s >= 70) { grade = '🟡 Good Shape'; color = 'var(--status-fair)'; }
+  else if (s >= 50) { grade = '🟠 Needs Attention'; color = 'var(--amber)'; }
+  else { grade = '🔴 Action Required'; color = 'var(--coral)'; }
+
+  if (tips.length === 0) tips.push('Great job keeping your home well-maintained!');
+
+  return { score: s, grade, tips: tips.slice(0,3), color };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DASHBOARD RENDER
+// ─────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const { score, grade, tips, color } = calcHealthScore();
+  const assets = activeAssets();
+  const warranties = allWarranties();
+  const today = new Date().toISOString().slice(0,10);
+  const in30 = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
+
+  // Health ring
+  const ring = document.getElementById('health-ring');
+  const circumference = 263.9;
+  const offset = circumference - (score / 100) * circumference;
+  if (ring) {
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = color;
+  }
+  const scoreNum = document.getElementById('health-score-num');
+  if (scoreNum) scoreNum.textContent = score;
+  const gradeEl = document.getElementById('health-grade');
+  if (gradeEl) { gradeEl.textContent = grade; gradeEl.style.color = color; }
+  const tipsEl = document.getElementById('health-tips');
+  if (tipsEl) tipsEl.innerHTML = tips.map(t => `<li class="health-tip">${t}</li>`).join('');
+
+  // Stats
+  const activeWarranties = warranties.filter(w => w.expDate && w.expDate > today);
+  const dueSoon = assets.filter(a => a.nextMaint && a.nextMaint <= in30 && a.nextMaint >= today);
+  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today);
+
+  setText('stat-assets', assets.length);
+  setText('stat-warranties', activeWarranties.length);
+  setText('stat-due-soon', dueSoon.length);
+  setText('stat-overdue', overdue.length);
+
+  // Maintenance alerts
+  const alertsEl = document.getElementById('dash-maintenance-alerts');
+  const alertItems = [...overdue.map(a => ({...a, urgency:'overdue'})), ...dueSoon.map(a => ({...a, urgency:'soon'}))].slice(0,5);
+  if (alertItems.length === 0) {
+    alertsEl.innerHTML = `<div class="card" style="padding:16px;text-align:center">
+      <span style="font-size:24px">✅</span>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">All maintenance up to date!</div>
+    </div>`;
+  } else {
+    alertsEl.innerHTML = alertItems.map(a => `
+      <div class="card card-sm mb-8" style="display:flex;align-items:center;justify-content:space-between;gap:12px" onclick="openAssetDetail('${a.id}')">
+        <div>
+          <div style="font-size:14px;font-weight:600">${a.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">Due: ${fmtDate(a.nextMaint)}</div>
+        </div>
+        <span class="badge ${a.urgency==='overdue'?'badge-coral':'badge-amber'}">${a.urgency==='overdue'?'Overdue':'Due Soon'}</span>
+      </div>`).join('');
+  }
+
+  // Replacements
+  const replacEl = document.getElementById('dash-replacements');
+  const year5 = new Date().getFullYear() + 5;
+  const near = assets.filter(a => {
+    const ry = parseInt(a.replacementYear) || (a.installDate ? parseInt(a.installDate.slice(0,4)) + (a.lifespan||20) : 9999);
+    return ry <= year5;
+  }).sort((a,b) => {
+    const ay = parseInt(a.replacementYear) || 9999;
+    const by = parseInt(b.replacementYear) || 9999;
+    return ay - by;
+  }).slice(0,5);
+
+  if (near.length === 0) {
+    replacEl.innerHTML = `<div class="card" style="padding:16px;text-align:center;font-size:13px;color:var(--text-muted)">No replacements forecast in the next 5 years 🎉</div>`;
+  } else {
+    replacEl.innerHTML = near.map(a => {
+      const ry = parseInt(a.replacementYear) || '—';
+      return `<div class="card card-sm mb-8" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:14px;font-weight:600">${a.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">Expected ${ry}</div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:var(--amber)">${fmt$$(a.replacementCost)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent activity
+  const recentEl = document.getElementById('dash-recent');
+  const recent = allMaintenance().slice(0,5);
+  if (recent.length === 0) {
+    recentEl.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">No maintenance logged yet</div>`;
+  } else {
+    recentEl.innerHTML = recent.map(m => `
+      <div class="detail-row">
+        <div>
+          <div style="font-size:13px;font-weight:600">${getAssetName(m.assetId)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${m.type || 'Service'} · ${fmtDate(m.date)}</div>
+        </div>
+        ${m.cost ? `<div style="font-size:13px;font-weight:700;color:var(--sage)">${fmt$$(m.cost)}</div>` : ''}
+      </div>`).join('');
+  }
+
+  // 5-year forecast
+  const forecastEl = document.getElementById('dash-forecast');
+  renderForecastWidget(forecastEl);
+}
+
+function renderForecastWidget(el) {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({length:6}, (_,i) => currentYear + i);
+  const assets = activeAssets();
+
+  const byYear = {};
+  years.forEach(y => byYear[y] = []);
+
+  assets.forEach(a => {
+    const ry = parseInt(a.replacementYear) || (a.installDate ? parseInt(a.installDate.slice(0,4)) + (a.lifespan||20) : null);
+    if (ry && byYear[ry]) byYear[ry].push(a);
+  });
+
+  const maxCost = Math.max(...years.map(y => byYear[y].reduce((sum,a) => sum + (a.replacementCost||0), 0)), 1);
+
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+    ${years.slice(1).map(y => {
+      const items = byYear[y] || [];
+      const cost = items.reduce((sum,a) => sum + (a.replacementCost||0), 0);
+      const pct = maxCost > 0 ? (cost/maxCost)*100 : 0;
+      return `<div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:600">${y}</span>
+          <span style="font-size:12px;color:${cost>0?'var(--amber)':'var(--text-muted)'}">
+            ${cost>0 ? fmt$$(cost) : 'No replacements'}
+          </span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:var(--amber);border-radius:3px;transition:width 0.5s ease"></div>
+        </div>
+        ${items.length>0 ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${items.map(a=>a.name).join(', ')}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ASSETS SCREEN
+// ─────────────────────────────────────────────────────────────
+function filterAssets(cat, btn) {
+  APP.assetFilter = cat;
+  document.querySelectorAll('#asset-category-tabs .pill-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderAssets();
+}
+
+function renderAssets() {
+  const search = (document.getElementById('asset-search')?.value || '').toLowerCase();
+  const filter = APP.assetFilter;
+  const grid = document.getElementById('assets-grid');
+  if (!grid) return;
+
+  let assets = activeAssets();
+  if (filter !== 'all') assets = assets.filter(a => a.category === filter);
+  if (search) assets = assets.filter(a =>
+    (a.name||'').toLowerCase().includes(search) ||
+    (a.category||'').toLowerCase().includes(search) ||
+    (a.notes||'').toLowerCase().includes(search)
+  );
+
+  // Group by category if 'all'
+  if (filter === 'all' && !search) {
+    const cats = [...new Set(assets.map(a => a.category))].sort();
+    let html = '';
+    cats.forEach(cat => {
+      const catAssets = assets.filter(a => a.category === cat);
+      html += `<div style="grid-column:1/-1">
+        <div class="section-header" style="margin-top:12px;margin-bottom:8px">
+          <div class="section-title" style="font-size:14px">${CAT_ICONS[cat]||'📦'} ${cat}</div>
+          <span class="badge badge-sage">${catAssets.length}</span>
+        </div>
+      </div>`;
+      html += catAssets.map(a => assetCardHTML(a)).join('');
+    });
+    if (html === '') html = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">🏗️</div><div class="empty-title">No Assets Yet</div><div class="empty-subtitle">Add your first asset to start tracking your home</div><button class="btn btn-primary mt-16" onclick="openAddAssetModal()">+ Add Asset</button></div></div>`;
+    grid.innerHTML = html;
+  } else {
+    if (assets.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No Results</div><div class="empty-subtitle">Try a different search or category</div></div></div>`;
+    } else {
+      grid.innerHTML = assets.map(a => assetCardHTML(a)).join('');
+    }
+  }
+}
+
+function assetCardHTML(a) {
+  const status = assetHealthStatus(a);
+  const age = assetAge(a);
+  return `
+  <div class="asset-card fade-in" onclick="openAssetDetail('${a.id}')">
+    <div class="asset-card-top">
+      <div>
+        <div class="asset-name">${a.name}</div>
+        <div class="asset-category">${CAT_ICONS[a.category]||'📦'} ${a.category}</div>
+      </div>
+      <span class="badge badge-${status.cls}">${status.label}</span>
+    </div>
+    <div class="asset-life-bar">
+      <div class="asset-life-fill" style="width:${Math.min(100,status.pct)}%;background:${lifeBarColor(status.pct)}"></div>
+    </div>
+    <div class="asset-meta">
+      <span>${age !== null ? Math.round(age) + ' yrs old' : 'Age unknown'}</span>
+      <span>${a.replacementCost ? fmt$$(a.replacementCost) : '—'}</span>
+    </div>
+  </div>`;
+}
+
+function openAssetDetail(id) {
+  const a = {...(APP.data.assets?.[id]||{}), id};
+  const status = assetHealthStatus(a);
+  const age = assetAge(a);
+  const maintHistory = allMaintenance().filter(m => m.assetId === id);
+  const warranty = Object.values(APP.data.warranties||{}).find(w => w.assetId === id);
+  const contractor = a.contractorId ? APP.data.contractors?.[a.contractorId] : null;
+  const today = new Date().toISOString().slice(0,10);
+
+  document.getElementById('adm-title').textContent = a.name || 'Asset Detail';
+  const body = document.getElementById('asset-detail-body');
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted)">${CAT_ICONS[a.category]||'📦'} ${a.category}</div>
+        <div style="font-size:22px;font-weight:800;margin-top:2px">${a.name}</div>
+      </div>
+      <span class="badge badge-${status.cls}" style="font-size:12px;padding:5px 12px">${status.label}</span>
+    </div>
+
+    <!-- Life bar -->
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px">
+        <span>Life Used</span><span>${Math.round(Math.min(100,status.pct))}%</span>
+      </div>
+      <div class="asset-life-bar" style="height:8px">
+        <div class="asset-life-fill" style="width:${Math.min(100,status.pct)}%;background:${lifeBarColor(status.pct)}"></div>
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div>
+      <div class="detail-row"><span class="detail-key">Install Date</span><span class="detail-val">${fmtDate(a.installDate)}</span></div>
+      <div class="detail-row"><span class="detail-key">Age</span><span class="detail-val">${age !== null ? Math.round(age) + ' years' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Expected Lifespan</span><span class="detail-val">${a.lifespan||'—'} years</span></div>
+      <div class="detail-row"><span class="detail-key">Replacement Year</span><span class="detail-val">${a.replacementYear||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Replacement Cost</span><span class="detail-val">${fmt$$(a.replacementCost)}</span></div>
+      <div class="detail-row"><span class="detail-key">Last Maintenance</span><span class="detail-val">${fmtDate(a.lastMaint)}</span></div>
+      <div class="detail-row"><span class="detail-key">Next Due</span><span class="detail-val ${a.nextMaint && a.nextMaint < today ? 'text-coral' : ''}">${fmtDate(a.nextMaint)}</span></div>
+      <div class="detail-row"><span class="detail-key">Warranty Expires</span><span class="detail-val ${warranty?.expDate && warranty.expDate < today ? 'text-coral' : ''}">${warranty ? fmtDate(warranty.expDate) : fmtDate(a.warrantyExp)}</span></div>
+    </div>
+
+    ${a.notes ? `<div style="margin-top:12px;padding:12px;background:var(--bg-input);border-radius:var(--radius-md);font-size:13px;color:var(--text-secondary);line-height:1.5">${a.notes}</div>` : ''}
+
+    <!-- Maintenance History -->
+    ${maintHistory.length > 0 ? `
+    <div style="margin-top:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-muted)">MAINTENANCE HISTORY (${maintHistory.length})</div>
+      ${maintHistory.slice(0,5).map(m => `
+        <div class="detail-row">
+          <div><div style="font-size:13px;font-weight:600">${m.type||'Service'}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(m.date)}</div></div>
+          ${m.cost ? `<span style="font-size:13px;font-weight:700;color:var(--sage)">${fmt$$(m.cost)}</span>` : ''}
+        </div>`).join('')}
+    </div>` : ''}
+  `;
+
+  document.getElementById('asset-detail-footer').innerHTML = `
+    <button class="btn btn-primary" onclick="openEditAssetModal('${id}');closeModal('asset-detail-modal')" style="flex:1">✏️ Edit</button>
+    <button class="btn btn-secondary" onclick="openAddMaintenanceModal('${id}');closeModal('asset-detail-modal')">🔧 Log</button>
+    <button class="btn btn-danger" onclick="confirmDeleteAsset('${id}');closeModal('asset-detail-modal')">🗑️</button>
+  `;
+
+  openModal('asset-detail-modal');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ASSET CRUD
+// ─────────────────────────────────────────────────────────────
+function openAddAssetModal() {
+  document.getElementById('asset-modal-title').textContent = 'Add Asset';
+  document.getElementById('am-id').value = '';
+  document.getElementById('am-name').value = '';
+  document.getElementById('am-category').value = 'Structural';
+  document.getElementById('am-lifespan').value = '';
+  document.getElementById('am-install-date').value = '';
+  document.getElementById('am-replacement-cost').value = '';
+  document.getElementById('am-last-maint').value = '';
+  document.getElementById('am-next-maint').value = '';
+  document.getElementById('am-warranty-exp').value = '';
+  document.getElementById('am-replacement-year').value = '';
+  document.getElementById('am-notes').value = '';
+  openModal('asset-modal');
+}
+
+function openEditAssetModal(id) {
+  const a = APP.data.assets?.[id];
+  if (!a) return;
+  document.getElementById('asset-modal-title').textContent = 'Edit Asset';
+  document.getElementById('am-id').value = id;
+  document.getElementById('am-name').value = a.name||'';
+  document.getElementById('am-category').value = a.category||'Custom';
+  document.getElementById('am-lifespan').value = a.lifespan||'';
+  document.getElementById('am-install-date').value = a.installDate||'';
+  document.getElementById('am-replacement-cost').value = a.replacementCost||'';
+  document.getElementById('am-last-maint').value = a.lastMaint||'';
+  document.getElementById('am-next-maint').value = a.nextMaint||'';
+  document.getElementById('am-warranty-exp').value = a.warrantyExp||'';
+  document.getElementById('am-replacement-year').value = a.replacementYear||'';
+  document.getElementById('am-notes').value = a.notes||'';
+  openModal('asset-modal');
+}
+
+async function saveAsset() {
+  const name = document.getElementById('am-name').value.trim();
+  if (!name) { showToast('❌ Asset name is required'); return; }
+
+  const id = document.getElementById('am-id').value || uid();
+  const installDate = document.getElementById('am-install-date').value;
+  const lifespan = parseInt(document.getElementById('am-lifespan').value) || 20;
+  let replacementYear = document.getElementById('am-replacement-year').value;
+  if (!replacementYear && installDate) {
+    replacementYear = String(parseInt(installDate.slice(0,4)) + lifespan);
+  }
+
+  const asset = {
+    name,
+    category: document.getElementById('am-category').value,
+    lifespan,
+    installDate,
+    replacementCost: parseFloat(document.getElementById('am-replacement-cost').value)||0,
+    lastMaint: document.getElementById('am-last-maint').value,
+    nextMaint: document.getElementById('am-next-maint').value,
+    warrantyExp: document.getElementById('am-warranty-exp').value,
+    replacementYear,
+    notes: document.getElementById('am-notes').value.trim(),
+    archived: false,
+    contractorId: APP.data.assets?.[id]?.contractorId||''
+  };
+
+  APP.data.assets = APP.data.assets || {};
+  APP.data.assets[id] = asset;
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  await saveToFirebase('assets/' + id, asset);
+  closeModal('asset-modal');
+  renderAssets();
+  showToast('✅ Asset saved');
+}
+
+function confirmDeleteAsset(id) {
+  const name = APP.data.assets?.[id]?.name || 'this asset';
+  showConfirm('Delete Asset?', `Are you sure you want to delete "${name}"? This cannot be undone.`, async () => {
+    delete APP.data.assets[id];
+    // Remove related maintenance/warranties
+    Object.keys(APP.data.maintenance||{}).forEach(mid => {
+      if (APP.data.maintenance[mid].assetId === id) delete APP.data.maintenance[mid];
+    });
+    Object.keys(APP.data.warranties||{}).forEach(wid => {
+      if (APP.data.warranties[wid].assetId === id) delete APP.data.warranties[wid];
+    });
+    localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    await saveAllToFirebase();
+    closeModal('confirm-modal');
+    renderAssets();
+    showToast('🗑️ Asset deleted');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAINTENANCE
+// ─────────────────────────────────────────────────────────────
+function renderMaintenance() {
+  renderMaintenanceReminders();
+  renderMaintHistory();
+  populateMaintYearFilter();
+}
+
+function renderMaintenanceReminders() {
+  const el = document.getElementById('maintenance-reminders');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  const in30 = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
+  const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
+
+  const assets = activeAssets();
+  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today);
+  const thisMonth = assets.filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30);
+  const next90 = assets.filter(a => a.nextMaint && a.nextMaint > in30 && a.nextMaint <= in90);
+
+  if (overdue.length === 0 && thisMonth.length === 0 && next90.length === 0) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:16px;margin-bottom:16px">
+      <span style="font-size:24px">✅</span>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">No upcoming maintenance due</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  if (overdue.length > 0) {
+    html += `<div class="card mb-8" style="border-color:var(--coral-dim)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span>🚨</span><span style="font-size:13px;font-weight:700;color:var(--coral)">Overdue (${overdue.length})</span>
+      </div>
+      ${overdue.map(a => `<div class="detail-row" onclick="openAssetDetail('${a.id}')" style="cursor:pointer">
+        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--coral)">Was due: ${fmtDate(a.nextMaint)}</div></div>
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openAddMaintenanceModal('${a.id}')">Log</button>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (thisMonth.length > 0) {
+    html += `<div class="card mb-8" style="border-color:var(--amber-dim)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span>📅</span><span style="font-size:13px;font-weight:700;color:var(--amber)">Due This Month (${thisMonth.length})</span>
+      </div>
+      ${thisMonth.map(a => `<div class="detail-row">
+        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(a.nextMaint)}</div></div>
+        <button class="btn btn-sm btn-secondary" onclick="openAddMaintenanceModal('${a.id}')">Log</button>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (next90.length > 0) {
+    html += `<div class="card mb-8">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span>🔔</span><span style="font-size:13px;font-weight:700">Next 90 Days (${next90.length})</span>
+      </div>
+      ${next90.slice(0,4).map(a => `<div class="detail-row">
+        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(a.nextMaint)}</div></div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function populateMaintYearFilter() {
+  const sel = document.getElementById('maint-filter-year');
+  if (!sel) return;
+  const years = [...new Set(allMaintenance().map(m => m.date?.slice(0,4)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = '<option value="all">All Years</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+}
+
+function renderMaintHistory() {
+  const el = document.getElementById('maintenance-history');
+  if (!el) return;
+  const yearFilter = document.getElementById('maint-filter-year')?.value || 'all';
+  let logs = allMaintenance();
+  if (yearFilter !== 'all') logs = logs.filter(m => m.date?.startsWith(yearFilter));
+
+  if (logs.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No History Yet</div><div class="empty-subtitle">Log your first maintenance entry to start building your home's record</div><button class="btn btn-primary mt-16" onclick="openAddMaintenanceModal()">+ Log Entry</button></div>`;
+    return;
+  }
+
+  const totalCost = logs.reduce((s,m) => s + (parseFloat(m.cost)||0), 0);
+  let html = `<div class="card card-sm mb-8" style="background:var(--bg-elevated)">
+    <div style="display:flex;justify-content:space-between;font-size:13px">
+      <span style="color:var(--text-muted)">${logs.length} entries</span>
+      <span style="font-weight:700;color:var(--sage)">Total: ${fmt$$(totalCost)}</span>
+    </div>
+  </div>`;
+
+  html += `<div class="timeline">`;
+  logs.forEach(m => {
+    const icon = MAINT_TYPE_ICONS[m.type] || '🔧';
+    const contractor = m.contractorId ? getContractorName(m.contractorId) : null;
+    html += `
+    <div class="timeline-item">
+      <div class="timeline-dot past">${icon}</div>
+      <div class="timeline-content">
+        <div class="timeline-date">${fmtDate(m.date)}</div>
+        <div class="timeline-title">${getAssetName(m.assetId)}</div>
+        <div class="timeline-detail">${m.type||'Service'}${contractor ? ' · ' + contractor : ''}${m.notes ? ' · ' + m.notes.slice(0,60) : ''}</div>
+        ${m.cost ? `<div class="timeline-cost">${fmt$$(m.cost)}</div>` : ''}
+      </div>
+      <button class="btn btn-ghost btn-icon-only btn-sm" style="font-size:14px;flex-shrink:0" onclick="confirmDeleteMaintenance('${m.id}')">🗑️</button>
+    </div>`;
+  });
+  html += `</div>`;
+
+  el.innerHTML = html;
+}
+
+function openAddMaintenanceModal(preselectedAssetId) {
+  document.getElementById('mm-title').textContent = 'Log Maintenance';
+  document.getElementById('mm-id').value = '';
+  document.getElementById('mm-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mm-cost').value = '';
+  document.getElementById('mm-type').value = 'Service';
+  document.getElementById('mm-notes').value = '';
+
+  // Populate asset select
+  const sel = document.getElementById('mm-asset');
+  const assets = activeAssets().sort((a,b) => a.name.localeCompare(b.name));
+  sel.innerHTML = assets.map(a => `<option value="${a.id}" ${a.id===preselectedAssetId?'selected':''}>${a.name}</option>`).join('');
+
+  // Populate contractor select
+  const csel = document.getElementById('mm-contractor');
+  const contractors = allContractors();
+  csel.innerHTML = '<option value="">None / DIY</option>' + contractors.map(c => `<option value="${c.id}">${c.company}</option>`).join('');
+
+  openModal('maint-modal');
+}
+
+async function saveMaintenance() {
+  const assetId = document.getElementById('mm-asset').value;
+  const date = document.getElementById('mm-date').value;
+  if (!assetId || !date) { showToast('❌ Asset and date are required'); return; }
+
+  const id = document.getElementById('mm-id').value || uid();
+  const cost = parseFloat(document.getElementById('mm-cost').value)||0;
+  const contractorId = document.getElementById('mm-contractor').value;
+
+  const entry = {
+    assetId, date, cost,
+    type: document.getElementById('mm-type').value,
+    contractorId,
+    notes: document.getElementById('mm-notes').value.trim()
+  };
+
+  APP.data.maintenance = APP.data.maintenance || {};
+  APP.data.maintenance[id] = entry;
+
+  // Update asset's last maintenance date
+  if (APP.data.assets?.[assetId]) {
+    if (!APP.data.assets[assetId].lastMaint || date > APP.data.assets[assetId].lastMaint) {
+      APP.data.assets[assetId].lastMaint = date;
+      await saveToFirebase('assets/' + assetId + '/lastMaint', date);
+    }
+  }
+
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  await saveToFirebase('maintenance/' + id, entry);
+  closeModal('maint-modal');
+  renderMaintenance();
+  showToast('✅ Maintenance logged');
+}
+
+async function confirmDeleteMaintenance(id) {
+  showConfirm('Delete Entry?', 'Remove this maintenance record?', async () => {
+    delete APP.data.maintenance[id];
+    localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    await dbRef('maintenance/' + id).remove();
+    closeModal('confirm-modal');
+    renderMaintHistory();
+    showToast('🗑️ Entry deleted');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TIMELINE
+// ─────────────────────────────────────────────────────────────
+function filterTimeline(type, btn) {
+  APP.timelineFilter = type;
+  document.querySelectorAll('#screen-timeline .pill-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const el = document.getElementById('timeline-container');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  const currentYear = new Date().getFullYear();
+  const yearBuilt = APP.data.profile?.yearBuilt || 1967;
+
+  let items = [];
+
+  // Home built
+  items.push({
+    date: yearBuilt + '-01-01',
+    year: yearBuilt,
+    title: 'Home Built',
+    detail: APP.data.profile?.address || 'Property established',
+    type: 'home',
+    icon: '🏠',
+    cost: null,
+    future: false
+  });
+
+  // Maintenance history
+  allMaintenance().forEach(m => {
+    items.push({
+      date: m.date,
+      year: parseInt(m.date?.slice(0,4)||0),
+      title: getAssetName(m.assetId),
+      detail: m.type + (m.contractorId ? ' · ' + getContractorName(m.contractorId) : '') + (m.notes ? ' — ' + m.notes.slice(0,50) : ''),
+      type: 'maintenance',
+      icon: MAINT_TYPE_ICONS[m.type]||'🔧',
+      cost: m.cost,
+      future: false
+    });
+  });
+
+  // Future replacements
+  activeAssets().forEach(a => {
+    const ry = parseInt(a.replacementYear) || (a.installDate ? parseInt(a.installDate.slice(0,4)) + (a.lifespan||20) : null);
+    if (ry && ry > currentYear) {
+      items.push({
+        date: ry + '-06-01',
+        year: ry,
+        title: a.name + ' Replacement',
+        detail: 'Expected based on ' + (a.lifespan||'estimated') + ' year lifespan',
+        type: 'future',
+        icon: '🔄',
+        cost: a.replacementCost,
+        future: true
+      });
+    }
+  });
+
+  // Filter
+  const filter = APP.timelineFilter;
+  if (filter === 'past') items = items.filter(i => !i.future);
+  if (filter === 'future') items = items.filter(i => i.future || i.type === 'home');
+
+  // Sort
+  items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No Timeline Events</div><div class="empty-subtitle">Log maintenance and add assets to build your home's timeline</div></div>`;
+    return;
+  }
+
+  // Group by year
+  const byYear = {};
+  items.forEach(i => {
+    if (!byYear[i.year]) byYear[i.year] = [];
+    byYear[i.year].push(i);
+  });
+
+  const years = Object.keys(byYear).sort();
+  let html = '<div class="timeline">';
+
+  years.forEach(year => {
+    const yearItems = byYear[year];
+    html += `<div class="timeline-item">
+      <div class="timeline-dot home" style="font-size:12px;font-weight:800;width:40px;height:40px">${year}</div>
+      <div class="timeline-content">
+        ${yearItems.map(item => `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span>${item.icon}</span>
+              <span class="timeline-title">${item.title}</span>
+              ${item.future ? '<span class="badge badge-amber" style="font-size:9px">Projected</span>' : ''}
+            </div>
+            ${item.detail ? `<div class="timeline-detail">${item.detail}</div>` : ''}
+            ${item.cost ? `<div class="timeline-cost">${fmt$$(item.cost)}</div>` : ''}
+          </div>`).join('<hr style="border-color:var(--border-light);margin:8px 0">')}
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CONTRACTORS
+// ─────────────────────────────────────────────────────────────
+function renderContractors() {
+  const el = document.getElementById('contractors-list');
+  if (!el) return;
+  const search = (document.getElementById('contractor-search')?.value || '').toLowerCase();
+  let contractors = allContractors();
+  if (search) contractors = contractors.filter(c =>
+    (c.company||'').toLowerCase().includes(search) ||
+    (c.contact||'').toLowerCase().includes(search) ||
+    (c.category||'').toLowerCase().includes(search)
+  );
+
+  if (contractors.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👷</div><div class="empty-title">No Contractors Yet</div><div class="empty-subtitle">Add your trusted service providers to quickly reference them when logging maintenance</div><button class="btn btn-primary mt-16" onclick="openAddContractorModal()">+ Add Contractor</button></div>`;
+    return;
+  }
+
+  el.innerHTML = contractors.map(c => {
+    const jobCount = allMaintenance().filter(m => m.contractorId === c.id).length;
+    return `
+    <div class="contractor-card mb-8">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="contractor-name">${c.company}</div>
+          ${c.contact ? `<div style="font-size:12px;color:var(--text-muted)">${c.contact}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge badge-sage">${c.category||'General'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openEditContractorModal('${c.id}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="confirmDeleteContractor('${c.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="contractor-meta">
+        ${c.phone ? `<div class="contractor-contact">📞 <a href="tel:${c.phone}" style="color:inherit">${c.phone}</a></div>` : ''}
+        ${c.email ? `<div class="contractor-contact">✉️ <a href="mailto:${c.email}" style="color:inherit">${c.email}</a></div>` : ''}
+        ${c.website ? `<div class="contractor-contact">🌐 <a href="${c.website}" target="_blank" style="color:var(--sage)">Website</a></div>` : ''}
+      </div>
+      ${jobCount > 0 ? `<div style="font-size:11px;color:var(--text-muted)">${jobCount} job${jobCount!==1?'s':''} logged</div>` : ''}
+      ${c.notes ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${c.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openAddContractorModal() {
+  document.getElementById('cm-title').textContent = 'Add Contractor';
+  document.getElementById('cm-id').value = '';
+  ['company','contact','phone','email','website','notes'].forEach(f => document.getElementById('cm-'+f).value = '');
+  document.getElementById('cm-category').value = 'General';
+  openModal('contractor-modal');
+}
+
+function openEditContractorModal(id) {
+  const c = APP.data.contractors?.[id];
+  if (!c) return;
+  document.getElementById('cm-title').textContent = 'Edit Contractor';
+  document.getElementById('cm-id').value = id;
+  document.getElementById('cm-company').value = c.company||'';
+  document.getElementById('cm-contact').value = c.contact||'';
+  document.getElementById('cm-phone').value = c.phone||'';
+  document.getElementById('cm-email').value = c.email||'';
+  document.getElementById('cm-website').value = c.website||'';
+  document.getElementById('cm-category').value = c.category||'General';
+  document.getElementById('cm-notes').value = c.notes||'';
+  openModal('contractor-modal');
+}
+
+async function saveContractor() {
+  const company = document.getElementById('cm-company').value.trim();
+  if (!company) { showToast('❌ Company name required'); return; }
+  const id = document.getElementById('cm-id').value || uid();
+  const contractor = {
+    company, contact: document.getElementById('cm-contact').value.trim(),
+    phone: document.getElementById('cm-phone').value.trim(),
+    email: document.getElementById('cm-email').value.trim(),
+    website: document.getElementById('cm-website').value.trim(),
+    category: document.getElementById('cm-category').value,
+    notes: document.getElementById('cm-notes').value.trim()
+  };
+  APP.data.contractors = APP.data.contractors || {};
+  APP.data.contractors[id] = contractor;
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  await saveToFirebase('contractors/' + id, contractor);
+  closeModal('contractor-modal');
+  renderContractors();
+  showToast('✅ Contractor saved');
+}
+
+function confirmDeleteContractor(id) {
+  const name = APP.data.contractors?.[id]?.company || 'this contractor';
+  showConfirm('Remove Contractor?', `Remove "${name}" from your directory?`, async () => {
+    delete APP.data.contractors[id];
+    localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    await dbRef('contractors/' + id).remove();
+    closeModal('confirm-modal');
+    renderContractors();
+    showToast('🗑️ Contractor removed');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  WARRANTIES
+// ─────────────────────────────────────────────────────────────
+function filterWarranties(type, btn) {
+  APP.warrantyFilter = type;
+  document.querySelectorAll('#screen-warranties .pill-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderWarranties();
+}
+
+function renderWarranties() {
+  const el = document.getElementById('warranties-list');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
+  const filter = APP.warrantyFilter;
+
+  let warranties = allWarranties();
+  if (filter === 'active') warranties = warranties.filter(w => w.expDate > today);
+  if (filter === 'expiring') warranties = warranties.filter(w => w.expDate > today && w.expDate <= in90);
+  if (filter === 'expired') warranties = warranties.filter(w => w.expDate <= today);
+
+  if (warranties.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No Warranties</div><div class="empty-subtitle">Track your warranty coverage to know when protection expires</div><button class="btn btn-primary mt-16" onclick="openAddWarrantyModal()">+ Add Warranty</button></div>`;
+    return;
+  }
+
+  el.innerHTML = warranties.map(w => {
+    const isExpired = w.expDate <= today;
+    const isExpiring = !isExpired && w.expDate <= in90;
+    const totalDays = w.startDate ? daysBetween(w.startDate, w.expDate) : 365;
+    const usedDays = w.startDate ? Math.max(0, daysBetween(w.startDate, today)) : 0;
+    const pct = Math.min(100, (usedDays / Math.max(1, totalDays)) * 100);
+    const daysLeft = daysBetween(today, w.expDate);
+
+    return `<div class="warranty-card mb-8">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${getAssetName(w.assetId)}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${w.provider}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          <span class="badge ${isExpired?'badge-coral':isExpiring?'badge-amber':'badge-sage'}">${isExpired?'Expired':isExpiring?'Expiring Soon':'Active'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="confirmDeleteWarranty('${w.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="warranty-progress">
+        <div class="warranty-progress-fill" style="width:${pct}%;background:${isExpired?'var(--coral)':isExpiring?'var(--amber)':'var(--sage)'}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+        <span>${w.startDate ? 'Started ' + fmtDate(w.startDate) : ''}</span>
+        <span>${isExpired ? 'Expired ' + fmtDate(w.expDate) : daysLeft + ' days remaining'}</span>
+      </div>
+      ${w.notes ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${w.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openAddWarrantyModal() {
+  document.getElementById('wm-title').textContent = 'Add Warranty';
+  document.getElementById('wm-id').value = '';
+  document.getElementById('wm-provider').value = '';
+  document.getElementById('wm-start').value = '';
+  document.getElementById('wm-exp').value = '';
+  document.getElementById('wm-notes').value = '';
+  const sel = document.getElementById('wm-asset');
+  const assets = activeAssets().sort((a,b) => a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">No specific asset</option>' + assets.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  openModal('warranty-modal');
+}
+
+async function saveWarranty() {
+  const provider = document.getElementById('wm-provider').value.trim();
+  const expDate = document.getElementById('wm-exp').value;
+  if (!provider || !expDate) { showToast('❌ Provider and expiration date required'); return; }
+  const id = document.getElementById('wm-id').value || uid();
+  const warranty = {
+    assetId: document.getElementById('wm-asset').value,
+    provider,
+    startDate: document.getElementById('wm-start').value,
+    expDate,
+    notes: document.getElementById('wm-notes').value.trim()
+  };
+  APP.data.warranties = APP.data.warranties || {};
+  APP.data.warranties[id] = warranty;
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  await saveToFirebase('warranties/' + id, warranty);
+  closeModal('warranty-modal');
+  renderWarranties();
+  showToast('✅ Warranty saved');
+}
+
+function confirmDeleteWarranty(id) {
+  showConfirm('Remove Warranty?', 'Remove this warranty record?', async () => {
+    delete APP.data.warranties[id];
+    localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    await dbRef('warranties/' + id).remove();
+    closeModal('confirm-modal');
+    renderWarranties();
+    showToast('🗑️ Warranty removed');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HOUSE PASSPORT
+// ─────────────────────────────────────────────────────────────
+function renderPassport() {
+  const el = document.getElementById('passport-content');
+  if (!el) return;
+  const p = APP.data.profile || {};
+  const assets = activeAssets();
+  const contractors = allContractors();
+  const warranties = allWarranties();
+  const maintenance = allMaintenance();
+  const today = new Date().toISOString().slice(0,10);
+
+  const totalMaintCost = maintenance.reduce((s,m) => s + (parseFloat(m.cost)||0), 0);
+  const cats = [...new Set(assets.map(a => a.category))].sort();
+
+  el.innerHTML = `
+  <!-- Header -->
+  <div class="card card-lg mb-16" style="background:linear-gradient(135deg,var(--bg-elevated),var(--bg-card));border-color:var(--sage-dim)">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+      <div style="font-size:48px">🏠</div>
+      <div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px">${p.householdName || 'My Home'}</div>
+        ${p.address ? `<div style="font-size:13px;color:var(--text-muted);margin-top:2px">📍 ${p.address}</div>` : ''}
+        <div class="badge badge-sage" style="margin-top:8px">Sync Key: ${APP.syncKey}</div>
+      </div>
+    </div>
+    <div class="grid-4" style="gap:12px">
+      ${p.yearBuilt ? `<div><div style="font-size:11px;color:var(--text-muted)">YEAR BUILT</div><div style="font-size:16px;font-weight:700">${p.yearBuilt}</div></div>` : ''}
+      ${p.sqft ? `<div><div style="font-size:11px;color:var(--text-muted)">SQ FT</div><div style="font-size:16px;font-weight:700">${Number(p.sqft).toLocaleString()}</div></div>` : ''}
+      ${p.bedrooms ? `<div><div style="font-size:11px;color:var(--text-muted)">BED/BATH</div><div style="font-size:16px;font-weight:700">${p.bedrooms}/${p.bathrooms}</div></div>` : ''}
+      ${p.homeValue ? `<div><div style="font-size:11px;color:var(--text-muted)">EST. VALUE</div><div style="font-size:16px;font-weight:700">${fmt$$(p.homeValue)}</div></div>` : ''}
+    </div>
+  </div>
+
+  <!-- Asset Summary -->
+  <div class="passport-section mb-16">
+    <div class="passport-section-header">📦 Assets (${assets.length})</div>
+    <div class="passport-section-body">
+      ${cats.map(cat => {
+        const catAssets = assets.filter(a => a.category === cat);
+        return `<div style="padding:12px 0;border-bottom:1px solid var(--border-light)">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">${CAT_ICONS[cat]||'📦'} ${cat.toUpperCase()}</div>
+          ${catAssets.map(a => {
+            const status = assetHealthStatus(a);
+            return `<div class="detail-row" style="padding:6px 0">
+              <span style="font-size:13px">${a.name}</span>
+              <span class="badge badge-${status.cls}">${status.label}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <!-- Maintenance Summary -->
+  <div class="passport-section mb-16">
+    <div class="passport-section-header">🔧 Maintenance History (${maintenance.length} records · ${fmt$$(totalMaintCost)} total)</div>
+    <div class="passport-section-body">
+      ${maintenance.slice(0,10).map(m => `<div class="detail-row">
+        <div><div style="font-size:13px;font-weight:600">${getAssetName(m.assetId)}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(m.date)} · ${m.type||'Service'}</div></div>
+        ${m.cost ? `<span style="font-size:13px;font-weight:700;color:var(--sage)">${fmt$$(m.cost)}</span>` : ''}
+      </div>`).join('')}
+      ${maintenance.length > 10 ? `<div style="text-align:center;padding:10px;font-size:12px;color:var(--text-muted)">+ ${maintenance.length-10} more records</div>` : ''}
+    </div>
+  </div>
+
+  <!-- Contractors -->
+  ${contractors.length > 0 ? `<div class="passport-section mb-16">
+    <div class="passport-section-header">👷 Contractors (${contractors.length})</div>
+    <div class="passport-section-body">
+      ${contractors.map(c => `<div class="detail-row">
+        <div><div style="font-size:13px;font-weight:600">${c.company}</div><div style="font-size:11px;color:var(--text-muted)">${c.category||''}${c.phone?' · '+c.phone:''}</div></div>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <!-- Warranties -->
+  ${warranties.length > 0 ? `<div class="passport-section mb-16">
+    <div class="passport-section-header">📋 Warranties (${warranties.filter(w => w.expDate > today).length} active)</div>
+    <div class="passport-section-body">
+      ${warranties.map(w => `<div class="detail-row">
+        <div><div style="font-size:13px;font-weight:600">${getAssetName(w.assetId)}</div><div style="font-size:11px;color:var(--text-muted)">${w.provider}</div></div>
+        <span class="badge ${w.expDate > today ? 'badge-sage' : 'badge-coral'}">${fmtDate(w.expDate)}</span>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:16px 0">
+    Generated by BurrowKeeper · ${new Date().toLocaleDateString()}
+  </div>`;
+}
+
+function exportPassport() {
+  const content = document.getElementById('passport-content')?.innerHTML || '';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>House Passport</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:20px;color:#1C1F2A}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+  .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+  </style></head><body>${content}</body></html>`;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'house-passport.html'; a.click();
+  showToast('📄 Passport exported');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SETTINGS
+// ─────────────────────────────────────────────────────────────
+function loadProfileIntoSettings() {
+  const p = APP.data.profile || {};
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('s-household-name', p.householdName);
+  set('s-address', p.address);
+  set('s-year-built', p.yearBuilt);
+  set('s-state', p.state);
+  set('s-beds', p.bedrooms);
+  set('s-baths', p.bathrooms);
+  set('s-sqft', p.sqft);
+  set('s-value', p.homeValue);
+  set('s-purchase-date', p.purchaseDate);
+  set('s-purchase-price', p.purchasePrice);
+  set('s-notes', p.notes);
+
+  const theme = APP.data.settings?.theme || 'dark';
+  const themeEl = document.getElementById('s-theme');
+  if (themeEl) themeEl.value = theme;
+
+  // Populate Firebase URL field
+  const storedUrl = localStorage.getItem('bk_firebase_url') || '';
+  const urlEl = document.getElementById('s-db-url');
+  if (urlEl) urlEl.value = storedUrl;
+
+  // Update sync status badge
+  updateSettingsSyncStatus(!!APP.db && !!storedUrl);
+
+  // Last sync time
+  const lastSync = localStorage.getItem('bk_last_sync');
+  const el3 = document.getElementById('last-sync-time');
+  if (el3) el3.textContent = lastSync || 'Never';
+}
+
+async function saveHomeProfile() {
+  const get = (id) => document.getElementById(id)?.value?.trim() || '';
+  APP.data.profile = {
+    householdName: get('s-household-name') || 'My Home',
+    address: get('s-address'),
+    yearBuilt: parseInt(get('s-year-built')) || 1967,
+    state: get('s-state') || 'Pennsylvania',
+    bedrooms: parseFloat(get('s-beds')) || 3,
+    bathrooms: parseFloat(get('s-baths')) || 2.5,
+    sqft: parseInt(get('s-sqft')) || 2387,
+    homeValue: parseInt(get('s-value')) || 600000,
+    purchaseDate: get('s-purchase-date'),
+    purchasePrice: parseInt(get('s-purchase-price')) || 0,
+    notes: get('s-notes')
+  };
+
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  await saveToFirebase('profile', APP.data.profile);
+
+  // Update display names
+  updateHouseNameDisplays();
+  showToast('✅ Profile saved');
+}
+
+function updateHouseNameDisplays() {
+  const name = APP.data.profile?.householdName || 'My Home';
+  const el1 = document.getElementById('top-bar-house-name');
+  const el2 = document.getElementById('rail-house-name');
+  if (el1) el1.textContent = name;
+  if (el2) el2.textContent = name;
+}
+
+function applyTheme(theme) {
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.body.classList.toggle('light-mode', !prefersDark);
+  } else {
+    document.body.classList.toggle('light-mode', theme === 'light');
+  }
+  APP.data.settings = APP.data.settings || {};
+  APP.data.settings.theme = theme;
+  localStorage.setItem('bk_data', JSON.stringify(APP.data));
+  saveToFirebase('settings', APP.data.settings);
+}
+
+function updateSyncKeyDisplay() {
+  const key = APP.syncKey || '------';
+  const el1 = document.getElementById('s-sync-key-display');
+  const el2 = document.getElementById('rail-sync-key');
+  if (el1) el1.textContent = key;
+  if (el2) el2.textContent = key;
+
+  const lastSync = localStorage.getItem('bk_last_sync');
+  const el3 = document.getElementById('last-sync-time');
+  if (el3) el3.textContent = lastSync || 'Never';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  IMPORT / EXPORT
+// ─────────────────────────────────────────────────────────────
+function exportJSON() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    syncKey: APP.syncKey,
+    ...APP.data
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'burrowkeeper-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 JSON exported');
+}
+
+function exportCSV() {
+  const assets = activeAssets();
+  const headers = ['Name','Category','Install Date','Lifespan (yrs)','Age (yrs)','Status','Replacement Year','Replacement Cost','Last Maintenance','Next Due','Notes'];
+  const rows = assets.map(a => {
+    const age = assetAge(a);
+    const status = assetHealthStatus(a);
+    return [
+      a.name, a.category, a.installDate||'',
+      a.lifespan||'', age !== null ? Math.round(age) : '',
+      status.label, a.replacementYear||'',
+      a.replacementCost||'', a.lastMaint||'', a.nextMaint||'',
+      (a.notes||'').replace(/,/g,'|')
+    ];
+  });
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'burrowkeeper-assets-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📊 CSV exported');
+}
+
+async function importJSON(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const data = JSON.parse(text);
+    if (data.profile) APP.data.profile = data.profile;
+    if (data.assets) APP.data.assets = data.assets;
+    if (data.maintenance) APP.data.maintenance = data.maintenance;
+    if (data.contractors) APP.data.contractors = data.contractors;
+    if (data.warranties) APP.data.warranties = data.warranties;
+    if (data.settings) APP.data.settings = data.settings;
+    localStorage.setItem('bk_data', JSON.stringify(APP.data));
+    await saveAllToFirebase();
+    loadProfileIntoSettings();
+    refreshCurrentScreen();
+    showToast('✅ Data imported successfully');
+  } catch(e) {
+    showToast('❌ Invalid JSON file');
+  }
+  event.target.value = '';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BADGES
+// ─────────────────────────────────────────────────────────────
+function updateBadges() {
+  const today = new Date().toISOString().slice(0,10);
+  const in30 = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
+  const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
+
+  const overdueCount = activeAssets().filter(a => a.nextMaint && a.nextMaint < today).length;
+  const dueSoonCount = activeAssets().filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30).length;
+  const maintCount = overdueCount + dueSoonCount;
+
+  const warrCount = allWarranties().filter(w => w.expDate && w.expDate > today && w.expDate <= in90).length;
+
+  const navBadge = document.getElementById('nav-maint-badge');
+  const railBadge = document.getElementById('rail-maint-badge');
+  const warrBadge = document.getElementById('rail-warr-badge');
+
+  if (navBadge) { navBadge.style.display = maintCount > 0 ? 'flex' : 'none'; navBadge.textContent = maintCount > 9 ? '9+' : maintCount; }
+  if (railBadge) { railBadge.style.display = maintCount > 0 ? 'flex' : 'none'; railBadge.textContent = maintCount; }
+  if (warrBadge) { warrBadge.style.display = warrCount > 0 ? 'flex' : 'none'; warrBadge.textContent = warrCount; }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODAL HELPERS
+// ─────────────────────────────────────────────────────────────
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('open');
+    el.addEventListener('click', function outsideClick(e) {
+      if (e.target === el) {
+        closeModal(id);
+        el.removeEventListener('click', outsideClick);
+      }
+    });
+  }
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+  // Only restore scroll if no other modals are open
+  if (!document.querySelector('.modal-overlay.open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function showConfirm(title, message, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  const btn = document.getElementById('confirm-btn');
+  btn.onclick = onConfirm;
+  openModal('confirm-modal');
+}
+
+function confirmReset() {
+  showConfirm(
+    'Reset Local Data?',
+    'This will clear all locally cached data. Your Firebase data remains intact. The page will reload.',
+    () => {
+      localStorage.removeItem('bk_data');
+      localStorage.removeItem('bk_last_sync');
+      window.location.reload();
+    }
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────────────────────
+function showToast(message, duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAIN INIT
+// ─────────────────────────────────────────────────────────────
+async function init() {
+  // Apply theme early from cache
+  const cachedData = localStorage.getItem('bk_data');
+  let cachedTheme = 'dark';
+  if (cachedData) {
+    try { cachedTheme = JSON.parse(cachedData)?.settings?.theme || 'dark'; } catch(e) {}
+  }
+  applyTheme(cachedTheme);
+
+  // Try to init Firebase from stored URL
+  const storedUrl = localStorage.getItem('bk_firebase_url');
+  const skipped = localStorage.getItem('bk_firebase_skipped');
+
+  if (storedUrl) {
+    initFirebaseFromUrl(storedUrl);
+  }
+
+  // If no URL and never skipped — show setup screen
+  if (!storedUrl && !skipped) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+    return;
+  }
+
+  // Check sync key
+  const storedKey = localStorage.getItem('bk_sync_key');
+  if (!storedKey) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('sync-screen').style.display = 'flex';
+    return;
+  }
+
+  APP.syncKey = storedKey;
+  await startApp();
+}
+
+// Listen for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (APP.data.settings?.theme === 'system') applyTheme('system');
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => {
+      closeModal(m.id);
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html>
