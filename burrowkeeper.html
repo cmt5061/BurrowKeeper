@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="BurrowKeeper">
 <meta name="theme-color" content="#1C1F26">
 <title>BurrowKeeper</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23a8c4a2' rx='115'/%3E%3C!-- House roofline --%3E%3Cpath d='M120 230 L256 110 L392 230 L370 230 L370 290 L142 290 L142 230 Z' fill='%233d5a4a' opacity='0.9'/%3E%3Crect x='228' y='160' width='56' height='50' rx='4' fill='%235a8a6a' opacity='0.7'/%3E%3Crect x='232' y='164' width='20' height='20' rx='2' fill='%233d5a4a' opacity='0.5'/%3E%3Crect x='256' y='164' width='20' height='20' rx='2' fill='%233d5a4a' opacity='0.5'/%3E%3Crect x='232' y='188' width='20' height='20' rx='2' fill='%233d5a4a' opacity='0.5'/%3E%3Crect x='256' y='188' width='20' height='20' rx='2' fill='%233d5a4a' opacity='0.5'/%3E%3C!-- Burrow mound --%3E%3Cellipse cx='256' cy='400' rx='160' ry='60' fill='%238B6914'/%3E%3Cellipse cx='256' cy='390' rx='140' ry='50' fill='%23a07820'/%3E%3C!-- Burrow hole --%3E%3Cellipse cx='256' cy='400' rx='80' ry='35' fill='%23251a0a'/%3E%3C!-- Bunny body/chest visible --%3E%3Cellipse cx='256' cy='385' rx='65' ry='45' fill='%23d4b896'/%3E%3C!-- Bunny ears --%3E%3Cellipse cx='224' cy='280' rx='18' ry='52' fill='%23d4b896' transform='rotate(-8,224,280)'/%3E%3Cellipse cx='226' cy='280' rx='9' ry='44' fill='%23e8a0a0' transform='rotate(-8,226,280)'/%3E%3Cellipse cx='288' cy='280' rx='18' ry='52' fill='%23d4b896' transform='rotate(8,288,280)'/%3E%3Cellipse cx='286' cy='280' rx='9' ry='44' fill='%23e8a0a0' transform='rotate(8,286,280)'/%3E%3C!-- Bunny head --%3E%3Ccircle cx='256' cy='340' r='68' fill='%23d4b896'/%3E%3C!-- Eyes --%3E%3Ccircle cx='234' cy='330' r='9' fill='%23251a0a'/%3E%3Ccircle cx='278' cy='330' r='9' fill='%23251a0a'/%3E%3Ccircle cx='237' cy='327' r='3' fill='white'/%3E%3Ccircle cx='281' cy='327' r='3' fill='white'/%3E%3C!-- Nose --%3E%3Cellipse cx='256' cy='352' rx='8' ry='6' fill='%23c47c7c'/%3E%3C!-- Mouth --%3E%3Cpath d='M248 358 Q256 365 264 358' stroke='%23a06060' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C!-- Paws over burrow edge --%3E%3Croundrect x='198' y='388' width='44' height='22' rx='11' fill='%23d4b896'/%3E%3Croundrect x='270' y='388' width='44' height='22' rx='11' fill='%23d4b896'/%3E%3C!-- Grass sprigs --%3E%3Cpath d='M148 370 Q140 340 148 310' stroke='%235a8a3a' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3Cpath d='M148 370 Q135 345 128 318' stroke='%235a8a3a' stroke-width='7' fill='none' stroke-linecap='round'/%3E%3Cpath d='M370 370 Q378 345 370 315' stroke='%235a8a3a' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3Cpath d='M370 370 Q383 348 388 320' stroke='%235a8a3a' stroke-width='7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -103,7 +104,7 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
 }
 
 /* Tablet: left rail */
@@ -119,6 +120,7 @@ html, body {
   background: var(--bg-base);
   border-bottom: 1px solid var(--border);
   padding: 14px 20px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -145,11 +147,15 @@ html, body {
 /* Logo mark */
 .bk-logo-mark {
   width: 36px; height: 36px;
-  background: var(--sage);
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.bk-logo-mark svg {
+  width: 36px; height: 36px;
+  display: block;
 }
 
 @media (min-width: 768px) {
@@ -164,10 +170,9 @@ html, body {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: stretch;
-  height: calc(var(--nav-height) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
   flex-shrink: 0;
   z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .nav-tab {
@@ -176,8 +181,9 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 4px;
+  gap: 3px;
+  padding: 10px 4px;
+  min-height: var(--nav-height);
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
@@ -536,6 +542,14 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Smaller badge inside asset cards so they never overflow */
+.asset-card .badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  letter-spacing: 0;
 }
 
 .badge-excellent { background: rgba(124,185,140,0.15); color: var(--status-excellent); }
@@ -587,12 +601,14 @@ html, body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .asset-card:hover {
@@ -601,9 +617,9 @@ html, body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
-.asset-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.asset-name { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
-.asset-category { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+.asset-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; min-width: 0; }
+.asset-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; word-break: break-word; min-width: 0; }
+.asset-category { font-size: 10px; color: var(--text-muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .asset-life-bar {
   height: 4px;
@@ -622,8 +638,15 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
+  gap: 4px;
+  min-width: 0;
+}
+.asset-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─────────────────────────────────────────────
@@ -904,7 +927,7 @@ html, body {
 ───────────────────────────────────────────── */
 #toast-container {
   position: fixed;
-  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 3000;
@@ -994,7 +1017,7 @@ html, body {
 ───────────────────────────────────────────── */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
   right: 20px;
   width: 56px;
   height: 56px;
@@ -1138,14 +1161,14 @@ html, body {
 
 <!-- Loading -->
 <div class="loading-overlay" id="loading-overlay">
-  <div style="font-size:48px">🏠</div>
+  <div style="margin-bottom:8px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72"><rect width="80" height="80" rx="18" fill="#a8c4a2"/><path d="M12 38 L40 18 L68 38 L63 38 L63 48 L17 48 L17 38Z" fill="#3d5a4a"/><rect x="33" y="23" width="14" height="14" rx="2" fill="#5a8a6a" opacity="0.8"/><rect x="34" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="34" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><ellipse cx="40" cy="68" rx="26" ry="10" fill="#8B6914"/><ellipse cx="40" cy="66" rx="22" ry="8" fill="#a07820"/><ellipse cx="40" cy="68" rx="14" ry="6.5" fill="#1a110a"/><ellipse cx="33" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(-10,33,48)"/><ellipse cx="33.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(-10,33.5,48)"/><ellipse cx="47" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(10,47,48)"/><ellipse cx="46.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(10,46.5,48)"/><circle cx="40" cy="57" r="12" fill="#d4b896"/><circle cx="35.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="44.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="36.2" cy="54.2" r="0.8" fill="white"/><circle cx="45.2" cy="54.2" r="0.8" fill="white"/><ellipse cx="40" cy="59" rx="2" ry="1.5" fill="#c47c7c"/><path d="M37 61 Q40 64 43 61" stroke="#a06060" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
   <div class="spinner"></div>
   <div>Loading BurrowKeeper…</div>
 </div>
 
 <!-- Setup Screen (no Firebase config) -->
 <div id="setup-screen" style="display:none">
-  <div class="setup-logo">🐰</div>
+  <div style="margin-bottom:8px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72"><rect width="80" height="80" rx="18" fill="#a8c4a2"/><path d="M12 38 L40 18 L68 38 L63 38 L63 48 L17 48 L17 38Z" fill="#3d5a4a"/><rect x="33" y="23" width="14" height="14" rx="2" fill="#5a8a6a" opacity="0.8"/><rect x="34" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="34" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><ellipse cx="40" cy="68" rx="26" ry="10" fill="#8B6914"/><ellipse cx="40" cy="66" rx="22" ry="8" fill="#a07820"/><ellipse cx="40" cy="68" rx="14" ry="6.5" fill="#1a110a"/><ellipse cx="33" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(-10,33,48)"/><ellipse cx="33.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(-10,33.5,48)"/><ellipse cx="47" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(10,47,48)"/><ellipse cx="46.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(10,46.5,48)"/><circle cx="40" cy="57" r="12" fill="#d4b896"/><circle cx="35.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="44.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="36.2" cy="54.2" r="0.8" fill="white"/><circle cx="45.2" cy="54.2" r="0.8" fill="white"/><ellipse cx="40" cy="59" rx="2" ry="1.5" fill="#c47c7c"/><path d="M37 61 Q40 64 43 61" stroke="#a06060" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
   <div class="setup-title">BurrowKeeper</div>
   <div class="setup-tagline">Your home's long-term memory. Track assets, maintenance, warranties, and more.</div>
 
@@ -1208,7 +1231,7 @@ html, body {
 
 <!-- Sync Key Screen -->
 <div id="sync-screen" style="display:none">
-  <div class="setup-logo">🏡</div>
+  <div style="margin-bottom:8px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72"><rect width="80" height="80" rx="18" fill="#a8c4a2"/><path d="M12 38 L40 18 L68 38 L63 38 L63 48 L17 48 L17 38Z" fill="#3d5a4a"/><rect x="33" y="23" width="14" height="14" rx="2" fill="#5a8a6a" opacity="0.8"/><rect x="34" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="24" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="34" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><rect x="41" y="31" width="5" height="5" rx="1" fill="#3d5a4a" opacity="0.6"/><ellipse cx="40" cy="68" rx="26" ry="10" fill="#8B6914"/><ellipse cx="40" cy="66" rx="22" ry="8" fill="#a07820"/><ellipse cx="40" cy="68" rx="14" ry="6.5" fill="#1a110a"/><ellipse cx="33" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(-10,33,48)"/><ellipse cx="33.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(-10,33.5,48)"/><ellipse cx="47" cy="48" rx="4" ry="11" fill="#d4b896" transform="rotate(10,47,48)"/><ellipse cx="46.5" cy="48" rx="2" ry="9" fill="#e8a0a0" transform="rotate(10,46.5,48)"/><circle cx="40" cy="57" r="12" fill="#d4b896"/><circle cx="35.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="44.5" cy="55" r="2.2" fill="#1a110a"/><circle cx="36.2" cy="54.2" r="0.8" fill="white"/><circle cx="45.2" cy="54.2" r="0.8" fill="white"/><ellipse cx="40" cy="59" rx="2" ry="1.5" fill="#c47c7c"/><path d="M37 61 Q40 64 43 61" stroke="#a06060" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
   <div class="setup-title">Your Burrow</div>
   <div class="setup-tagline">Start a new household or enter an existing Sync Key to load your home.</div>
 
@@ -1238,7 +1261,7 @@ html, body {
   <!-- Top Bar (mobile) -->
   <div id="top-bar">
     <div class="top-bar-left">
-      <div class="bk-logo-mark">🏠</div>
+      <div class="bk-logo-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36"><rect width="36" height="36" rx="8" fill="#a8c4a2"/><path d="M6 17 L18 8 L30 17 L28 17 L28 21 L8 21 L8 17Z" fill="#3d5a4a"/><rect x="15" y="10" width="6" height="6" rx="1" fill="#5a8a6a" opacity="0.8"/><rect x="15.5" y="10.5" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="18.3" y="10.5" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="15.5" y="13.3" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="18.3" y="13.3" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><ellipse cx="18" cy="30" rx="12" ry="5" fill="#8B6914"/><ellipse cx="18" cy="29" rx="10" ry="4" fill="#a07820"/><ellipse cx="18" cy="30" rx="6" ry="2.8" fill="#1a110a"/><ellipse cx="15.5" cy="21" rx="1.8" ry="5" fill="#d4b896" transform="rotate(-10,15.5,21)"/><ellipse cx="15.7" cy="21" rx="0.9" ry="4.2" fill="#e8a0a0" transform="rotate(-10,15.7,21)"/><ellipse cx="20.5" cy="21" rx="1.8" ry="5" fill="#d4b896" transform="rotate(10,20.5,21)"/><ellipse cx="20.3" cy="21" rx="0.9" ry="4.2" fill="#e8a0a0" transform="rotate(10,20.3,21)"/><circle cx="18" cy="25" r="5.5" fill="#d4b896"/><circle cx="16" cy="24" r="1" fill="#1a110a"/><circle cx="20" cy="24" r="1" fill="#1a110a"/><circle cx="16.3" cy="23.6" r="0.4" fill="white"/><circle cx="20.3" cy="23.6" r="0.4" fill="white"/><ellipse cx="18" cy="26" rx="0.9" ry="0.7" fill="#c47c7c"/></svg></div>
       <div>
         <div class="top-bar-title" id="top-bar-title">Dashboard</div>
         <div class="top-bar-subtitle" id="top-bar-house-name">My Home</div>
@@ -1253,7 +1276,7 @@ html, body {
   <div id="left-rail">
     <div class="rail-header">
       <div class="rail-brand">
-        <div class="bk-logo-mark">🏠</div>
+        <div class="bk-logo-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36"><rect width="36" height="36" rx="8" fill="#a8c4a2"/><path d="M6 17 L18 8 L30 17 L28 17 L28 21 L8 21 L8 17Z" fill="#3d5a4a"/><rect x="15" y="10" width="6" height="6" rx="1" fill="#5a8a6a" opacity="0.8"/><rect x="15.5" y="10.5" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="18.3" y="10.5" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="15.5" y="13.3" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><rect x="18.3" y="13.3" width="2.2" height="2.2" rx="0.4" fill="#3d5a4a" opacity="0.6"/><ellipse cx="18" cy="30" rx="12" ry="5" fill="#8B6914"/><ellipse cx="18" cy="29" rx="10" ry="4" fill="#a07820"/><ellipse cx="18" cy="30" rx="6" ry="2.8" fill="#1a110a"/><ellipse cx="15.5" cy="21" rx="1.8" ry="5" fill="#d4b896" transform="rotate(-10,15.5,21)"/><ellipse cx="15.7" cy="21" rx="0.9" ry="4.2" fill="#e8a0a0" transform="rotate(-10,15.7,21)"/><ellipse cx="20.5" cy="21" rx="1.8" ry="5" fill="#d4b896" transform="rotate(10,20.5,21)"/><ellipse cx="20.3" cy="21" rx="0.9" ry="4.2" fill="#e8a0a0" transform="rotate(10,20.3,21)"/><circle cx="18" cy="25" r="5.5" fill="#d4b896"/><circle cx="16" cy="24" r="1" fill="#1a110a"/><circle cx="20" cy="24" r="1" fill="#1a110a"/><circle cx="16.3" cy="23.6" r="0.4" fill="white"/><circle cx="20.3" cy="23.6" r="0.4" fill="white"/><ellipse cx="18" cy="26" rx="0.9" ry="0.7" fill="#c47c7c"/></svg></div>
         <div class="rail-brand-name">BurrowKeeper</div>
       </div>
       <div id="rail-house-name" class="rail-house-name">My Home</div>
@@ -1417,7 +1440,7 @@ html, body {
         <button class="pill-tab" onclick="filterAssets('Custom',this)">Custom</button>
       </div>
 
-      <div id="assets-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div id="assets-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
         <!-- Rendered by JS -->
       </div>
     </div>
