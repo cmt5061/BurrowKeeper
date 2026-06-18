@@ -80,12 +80,20 @@ body.light-mode {
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-html, body {
+html {
   height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  height: 100%;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   background: var(--bg-deep);
   color: var(--text-primary);
   overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 /* ─────────────────────────────────────────────
@@ -94,9 +102,11 @@ html, body {
 #app-shell {
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: 0;
+  height: 100svh; /* svh = small viewport height, excludes browser chrome on iOS */
   max-width: 100vw;
+  /* Fallback for browsers without svh support */
+  height: -webkit-fill-available;
+  height: 100svh;
 }
 
 #main-content {
@@ -104,12 +114,12 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
+  padding-bottom: 20px;
 }
 
 /* Tablet: left rail */
 @media (min-width: 768px) {
-  #app-shell { flex-direction: row; position: relative; height: 100dvh; }
+  #app-shell { flex-direction: row; height: 100dvh; }
   #main-content { padding-bottom: 24px; }
 }
 
@@ -171,13 +181,10 @@ html, body {
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  /* Fixed to physical screen bottom — works on all iOS/Android */
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 500;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Ensure it always hugs the bottom of its container */
+  margin-top: auto;
 }
 
 .nav-tab {
@@ -1468,6 +1475,13 @@ html, body {
       </div>
       <div id="maintenance-reminders"></div>
 
+      <!-- Contractors sub-section -->
+      <div class="section-header">
+        <div class="section-title">👷 Contractors</div>
+        <button class="btn btn-ghost btn-sm" onclick="openAddContractorModal()">+ Add</button>
+      </div>
+      <div id="maint-contractors-list"></div>
+
       <!-- Filter -->
       <div class="section-header">
         <div class="section-title">📋 History</div>
@@ -1917,9 +1931,36 @@ html, body {
       </div>
       <div class="form-group">
         <label class="form-label">Contractor</label>
-        <select class="form-select" id="mm-contractor">
+        <select class="form-select" id="mm-contractor" onchange="handleContractorSelect(this.value)">
           <option value="">None / DIY</option>
+          <option value="__new__">➕ Add New Contractor…</option>
         </select>
+      </div>
+      <!-- Inline new contractor form — shown only when "Add New" is selected -->
+      <div id="mm-new-contractor-fields" style="display:none;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">New Contractor</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <input class="form-input" id="mm-nc-company" placeholder="Company name *" style="font-size:14px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <input class="form-input" id="mm-nc-contact" placeholder="Contact person" style="font-size:13px">
+          <select class="form-select" id="mm-nc-category" style="font-size:13px">
+            <option value="HVAC">HVAC</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Roofing">Roofing</option>
+            <option value="General">General Contractor</option>
+            <option value="Landscaping">Landscaping</option>
+            <option value="Appliance">Appliance Repair</option>
+            <option value="Painting">Painting</option>
+            <option value="Pest Control">Pest Control</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input class="form-input" id="mm-nc-phone" placeholder="Phone" type="tel" style="font-size:13px">
+          <input class="form-input" id="mm-nc-email" placeholder="Email" type="email" style="font-size:13px">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Notes</label>
@@ -2754,10 +2795,10 @@ function renderDashboard() {
   const tipsEl = document.getElementById('health-tips');
   if (tipsEl) tipsEl.innerHTML = tips.map(t => `<li class="health-tip">${t}</li>`).join('');
 
-  // Stats
+  // Stats — exclude resolved reminders
   const activeWarranties = warranties.filter(w => w.expDate && w.expDate > today);
-  const dueSoon = assets.filter(a => a.nextMaint && a.nextMaint <= in30 && a.nextMaint >= today);
-  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today);
+  const dueSoon = assets.filter(a => a.nextMaint && a.nextMaint <= in30 && a.nextMaint >= today && !isReminderResolved(a));
+  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today && !isReminderResolved(a));
 
   setText('stat-assets', assets.length);
   setText('stat-warranties', activeWarranties.length);
@@ -2777,7 +2818,8 @@ function renderDashboard() {
       <div class="card card-sm mb-8" style="display:flex;align-items:center;justify-content:space-between;gap:12px" onclick="openAssetDetail('${a.id}')">
         <div>
           <div style="font-size:14px;font-weight:600">${a.name}</div>
-          <div style="font-size:11px;color:var(--text-muted)">Due: ${fmtDate(a.nextMaint)}</div>
+          <div style="font-size:11px;font-weight:600;color:${a.urgency==='overdue'?'var(--coral)':'var(--amber)'}">${reminderLabel(a)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${a.urgency==='overdue'?'Was due: ':'Due: '}${fmtDate(a.nextMaint)}</div>
         </div>
         <span class="badge ${a.urgency==='overdue'?'badge-coral':'badge-amber'}">${a.urgency==='overdue'?'Overdue':'Due Soon'}</span>
       </div>`).join('');
@@ -3106,8 +3148,34 @@ function confirmDeleteAsset(id) {
 // ─────────────────────────────────────────────────────────────
 function renderMaintenance() {
   renderMaintenanceReminders();
+  renderMaintContractors();
   renderMaintHistory();
   populateMaintYearFilter();
+}
+
+// Returns true if a maintenance log has been created for this asset on or after its nextMaint date
+function isReminderResolved(asset) {
+  if (!asset.nextMaint) return true;
+  const logs = allMaintenance().filter(m => m.assetId === asset.id);
+  // Resolved if any log entry date >= the nextMaint date
+  return logs.some(m => m.date && m.date >= asset.nextMaint);
+}
+
+// Returns a human-readable label for what kind of maintenance is due
+function reminderLabel(asset) {
+  // Infer from the asset's maintenance schedule notes, type, or category
+  const cat = asset.category || '';
+  const lifespan = asset.lifespan || 20;
+  const age = assetAge(asset);
+  const pct = age !== null ? (age / lifespan) * 100 : 0;
+  // If near end of life, label as replacement
+  if (pct >= 85) return 'Replacement Due';
+  // Category-specific defaults
+  const inspections = ['Structural', 'Electrical', 'Plumbing'];
+  const services = ['HVAC', 'Appliances'];
+  if (inspections.includes(cat)) return 'Inspection Due';
+  if (services.includes(cat)) return 'Service Due';
+  return 'Maintenance Due';
 }
 
 function renderMaintenanceReminders() {
@@ -3118,8 +3186,10 @@ function renderMaintenanceReminders() {
   const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
 
   const assets = activeAssets();
-  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today);
-  const thisMonth = assets.filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30);
+
+  // Filter out any asset whose reminder has been satisfied by a recent log
+  const overdue = assets.filter(a => a.nextMaint && a.nextMaint < today && !isReminderResolved(a));
+  const thisMonth = assets.filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30 && !isReminderResolved(a));
   const next90 = assets.filter(a => a.nextMaint && a.nextMaint > in30 && a.nextMaint <= in90);
 
   if (overdue.length === 0 && thisMonth.length === 0 && next90.length === 0) {
@@ -3130,16 +3200,32 @@ function renderMaintenanceReminders() {
     return;
   }
 
+  const reminderRow = (a, urgency) => {
+    const label = reminderLabel(a);
+    const age = assetAge(a);
+    const ageStr = age !== null ? Math.round(age) + ' yrs old' : '';
+    const lifeStr = a.lifespan ? `${a.lifespan} yr lifespan` : '';
+    const detail = [ageStr, lifeStr].filter(Boolean).join(' · ');
+    return `<div class="detail-row" onclick="openAssetDetail('${a.id}')" style="cursor:pointer;gap:8px">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:13px;font-weight:700">${a.name}</div>
+        <div style="font-size:11px;font-weight:600;color:${urgency==='overdue'?'var(--coral)':'var(--amber)'};margin-top:1px">${label}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px">
+          ${urgency==='overdue' ? 'Was due: ' + fmtDate(a.nextMaint) : fmtDate(a.nextMaint)}
+          ${detail ? ' · ' + detail : ''}
+        </div>
+      </div>
+      <button class="btn btn-sm ${urgency==='overdue'?'btn-primary':'btn-secondary'}" style="flex-shrink:0" onclick="event.stopPropagation();openAddMaintenanceModal('${a.id}')">Log</button>
+    </div>`;
+  };
+
   let html = '';
   if (overdue.length > 0) {
     html += `<div class="card mb-8" style="border-color:var(--coral-dim)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span>🚨</span><span style="font-size:13px;font-weight:700;color:var(--coral)">Overdue (${overdue.length})</span>
       </div>
-      ${overdue.map(a => `<div class="detail-row" onclick="openAssetDetail('${a.id}')" style="cursor:pointer">
-        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--coral)">Was due: ${fmtDate(a.nextMaint)}</div></div>
-        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openAddMaintenanceModal('${a.id}')">Log</button>
-      </div>`).join('')}
+      ${overdue.map(a => reminderRow(a, 'overdue')).join('')}
     </div>`;
   }
 
@@ -3148,25 +3234,103 @@ function renderMaintenanceReminders() {
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span>📅</span><span style="font-size:13px;font-weight:700;color:var(--amber)">Due This Month (${thisMonth.length})</span>
       </div>
-      ${thisMonth.map(a => `<div class="detail-row">
-        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(a.nextMaint)}</div></div>
-        <button class="btn btn-sm btn-secondary" onclick="openAddMaintenanceModal('${a.id}')">Log</button>
-      </div>`).join('')}
+      ${thisMonth.map(a => reminderRow(a, 'soon')).join('')}
     </div>`;
   }
 
   if (next90.length > 0) {
-    html += `<div class="card mb-8">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span>🔔</span><span style="font-size:13px;font-weight:700">Next 90 Days (${next90.length})</span>
-      </div>
-      ${next90.slice(0,4).map(a => `<div class="detail-row">
-        <div><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--text-muted)">${fmtDate(a.nextMaint)}</div></div>
-      </div>`).join('')}
+    const unresolved90 = next90.filter(a => !isReminderResolved(a));
+    if (unresolved90.length > 0) {
+      html += `<div class="card mb-8">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span>🔔</span><span style="font-size:13px;font-weight:700">Next 90 Days (${unresolved90.length})</span>
+        </div>
+        ${unresolved90.slice(0,6).map(a => {
+          const label = reminderLabel(a);
+          const age = assetAge(a);
+          return `<div class="detail-row">
+            <div>
+              <div style="font-size:13px;font-weight:600">${a.name}</div>
+              <div style="font-size:11px;color:var(--sage);font-weight:600">${label}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${fmtDate(a.nextMaint)}${age !== null ? ' · ' + Math.round(age) + ' yrs old' : ''}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+  }
+
+  if (!html) {
+    html = `<div class="card" style="text-align:center;padding:16px;margin-bottom:16px">
+      <span style="font-size:24px">✅</span>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">All caught up!</div>
     </div>`;
   }
 
   el.innerHTML = html;
+}
+
+function renderMaintContractors() {
+  const el = document.getElementById('maint-contractors-list');
+  if (!el) return;
+  const contractors = allContractors();
+  const allLogs = allMaintenance();
+  const today = new Date().toISOString().slice(0,10);
+
+  if (contractors.length === 0) {
+    el.innerHTML = `<div class="card card-sm mb-16" style="text-align:center;padding:20px">
+      <div style="font-size:24px;margin-bottom:8px">👷</div>
+      <div style="font-size:13px;color:var(--text-muted)">No contractors yet — add one when logging maintenance or tap + Add above</div>
+    </div>`;
+    return;
+  }
+
+  const html = contractors.map(c => {
+    const jobs = allLogs.filter(m => m.contractorId === c.id);
+    const lastJob = jobs.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+    const assetsServiced = [...new Set(jobs.map(m => getAssetName(m.assetId)))];
+    const totalSpent = jobs.reduce((s,m) => s + (parseFloat(m.cost)||0), 0);
+    const isProspect = !lastJob; // Never actually used yet
+
+    return `<div class="card card-sm mb-8" style="${isProspect ? 'border-color:var(--border-light);opacity:0.85' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:700">${c.company}</span>
+            <span class="badge ${isProspect ? 'badge-sky' : 'badge-sage'}" style="font-size:10px">${isProspect ? 'Prospect' : c.category||'General'}</span>
+          </div>
+          ${c.contact ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${c.contact}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="openEditContractorModal('${c.id}')" style="padding:4px 8px;font-size:12px">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="confirmDeleteContractor('${c.id}')" style="padding:4px 8px;font-size:12px">🗑️</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+        ${c.phone ? `<a href="tel:${c.phone}" style="font-size:11px;color:var(--sky);text-decoration:none">📞 ${c.phone}</a>` : ''}
+        ${c.email ? `<a href="mailto:${c.email}" style="font-size:11px;color:var(--sky);text-decoration:none">✉️ ${c.email}</a>` : ''}
+      </div>
+
+      ${isProspect
+        ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic">No jobs logged yet</div>`
+        : `<div style="display:flex;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)">
+            <div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Jobs</div><div style="font-size:13px;font-weight:700">${jobs.length}</div></div>
+            ${totalSpent > 0 ? `<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Total Spent</div><div style="font-size:13px;font-weight:700;color:var(--sage)">${fmt$$(totalSpent)}</div></div>` : ''}
+            <div style="flex:1;min-width:0"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Last Used</div><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(lastJob?.date)}</div></div>
+          </div>
+          ${assetsServiced.length > 0 ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Serviced: ${assetsServiced.slice(0,3).join(', ')}${assetsServiced.length > 3 ? ' +' + (assetsServiced.length-3) + ' more' : ''}</div>` : ''}`
+      }
+    </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+function handleContractorSelect(val) {
+  const fields = document.getElementById('mm-new-contractor-fields');
+  if (!fields) return;
+  fields.style.display = val === '__new__' ? 'block' : 'none';
 }
 
 function populateMaintYearFilter() {
@@ -3225,15 +3389,25 @@ function openAddMaintenanceModal(preselectedAssetId) {
   document.getElementById('mm-type').value = 'Service';
   document.getElementById('mm-notes').value = '';
 
+  // Hide inline new-contractor fields
+  const ncFields = document.getElementById('mm-new-contractor-fields');
+  if (ncFields) ncFields.style.display = 'none';
+  ['mm-nc-company','mm-nc-contact','mm-nc-phone','mm-nc-email'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
   // Populate asset select
   const sel = document.getElementById('mm-asset');
   const assets = activeAssets().sort((a,b) => a.name.localeCompare(b.name));
   sel.innerHTML = assets.map(a => `<option value="${a.id}" ${a.id===preselectedAssetId?'selected':''}>${a.name}</option>`).join('');
 
-  // Populate contractor select
+  // Populate contractor select with Add New option
   const csel = document.getElementById('mm-contractor');
   const contractors = allContractors();
-  csel.innerHTML = '<option value="">None / DIY</option>' + contractors.map(c => `<option value="${c.id}">${c.company}</option>`).join('');
+  csel.innerHTML = '<option value="">None / DIY</option>' +
+    contractors.map(c => `<option value="${c.id}">${c.company}</option>`).join('') +
+    '<option value="__new__">➕ Add New Contractor…</option>';
+  csel.value = '';
 
   openModal('maint-modal');
 }
@@ -3245,12 +3419,32 @@ async function saveMaintenance() {
 
   const id = document.getElementById('mm-id').value || uid();
   const cost = parseFloat(document.getElementById('mm-cost').value)||0;
-  const contractorId = document.getElementById('mm-contractor').value;
+  let contractorId = document.getElementById('mm-contractor').value;
+
+  // Handle inline new contractor creation
+  if (contractorId === '__new__') {
+    const company = document.getElementById('mm-nc-company').value.trim();
+    if (!company) { showToast('❌ Contractor name is required'); return; }
+    const newId = uid();
+    const newContractor = {
+      company,
+      contact: document.getElementById('mm-nc-contact').value.trim(),
+      phone: document.getElementById('mm-nc-phone').value.trim(),
+      email: document.getElementById('mm-nc-email').value.trim(),
+      website: '',
+      category: document.getElementById('mm-nc-category').value,
+      notes: ''
+    };
+    APP.data.contractors = APP.data.contractors || {};
+    APP.data.contractors[newId] = newContractor;
+    await saveToFirebase('contractors/' + newId, newContractor);
+    contractorId = newId;
+  }
 
   const entry = {
     assetId, date, cost,
     type: document.getElementById('mm-type').value,
-    contractorId,
+    contractorId: contractorId || '',
     notes: document.getElementById('mm-notes').value.trim()
   };
 
@@ -3258,10 +3452,26 @@ async function saveMaintenance() {
   APP.data.maintenance[id] = entry;
 
   // Update asset's last maintenance date
-  if (APP.data.assets?.[assetId]) {
-    if (!APP.data.assets[assetId].lastMaint || date > APP.data.assets[assetId].lastMaint) {
-      APP.data.assets[assetId].lastMaint = date;
-      await saveToFirebase('assets/' + assetId + '/lastMaint', date);
+  const asset = APP.data.assets?.[assetId];
+  if (asset) {
+    const updates = {};
+    if (!asset.lastMaint || date > asset.lastMaint) {
+      asset.lastMaint = date;
+      updates.lastMaint = date;
+    }
+    // If this log satisfies a nextMaint reminder, advance nextMaint
+    // so the reminder disappears (isReminderResolved will return true)
+    // We don't auto-set the new nextMaint — that stays as-is for user to update
+    // But we do clear it if the log is on or after nextMaint
+    if (asset.nextMaint && date >= asset.nextMaint) {
+      // Don't clear nextMaint — isReminderResolved() will suppress the reminder
+      // This preserves the date for reference
+    }
+    if (Object.keys(updates).length > 0) {
+      Object.assign(APP.data.assets[assetId], updates);
+      for (const [k,v] of Object.entries(updates)) {
+        await saveToFirebase('assets/' + assetId + '/' + k, v);
+      }
     }
   }
 
@@ -3870,8 +4080,8 @@ function updateBadges() {
   const in30 = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
   const in90 = new Date(Date.now() + 90*86400000).toISOString().slice(0,10);
 
-  const overdueCount = activeAssets().filter(a => a.nextMaint && a.nextMaint < today).length;
-  const dueSoonCount = activeAssets().filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30).length;
+  const overdueCount = activeAssets().filter(a => a.nextMaint && a.nextMaint < today && !isReminderResolved(a)).length;
+  const dueSoonCount = activeAssets().filter(a => a.nextMaint && a.nextMaint >= today && a.nextMaint <= in30 && !isReminderResolved(a)).length;
   const maintCount = overdueCount + dueSoonCount;
 
   const warrCount = allWarranties().filter(w => w.expDate && w.expDate > today && w.expDate <= in90).length;
