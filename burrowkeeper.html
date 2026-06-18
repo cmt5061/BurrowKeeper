@@ -1165,6 +1165,8 @@ html, body {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 </style>
+<!-- Earliest possible iOS PWA height fix - runs before body renders -->
+<script>document.documentElement.style.height = window.innerHeight + 'px';</script>
 </head>
 <body>
 
@@ -4206,6 +4208,24 @@ document.addEventListener('keydown', (e) => {
 // ─────────────────────────────────────────────────────────────
 //  BOOT
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  iOS PWA STANDALONE HEIGHT FIX
+//  On initial load in iOS PWA mode, height:100% on the body
+//  resolves incorrectly until a keyboard interaction forces a
+//  relayout. Fix: stamp window.innerHeight onto the html element
+//  directly — this is what iOS actually recalculates after
+//  keyboard events, so we replicate it on load.
+// ─────────────────────────────────────────────────────────────
+function fixIOSHeight() {
+  document.documentElement.style.height = window.innerHeight + 'px';
+}
+// Run immediately (before DOMContentLoaded so no flash)
+fixIOSHeight();
+// Re-run after load settles in case iOS adjusted
+window.addEventListener('load', fixIOSHeight);
+// Re-run after orientation change
+window.addEventListener('orientationchange', () => setTimeout(fixIOSHeight, 200));
+
 window.addEventListener('DOMContentLoaded', init);
 
 </script>
