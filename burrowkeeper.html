@@ -80,11 +80,10 @@ body.light-mode {
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-html {
-  height: 100%;
-}
-
-body {
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   background: var(--bg-deep);
@@ -98,10 +97,13 @@ body {
 #app-shell {
   display: flex;
   flex-direction: column;
-  /* --app-height is set by JS on load and resize — the only reliable
-     approach for iOS Safari standalone PWA mode */
-  height: var(--app-height, 100vh);
-  max-width: 100vw;
+  /* position:fixed with inset:0 is the only approach that truly
+     fills the screen in iOS PWA standalone mode — no gap, no math */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 #main-content {
@@ -109,8 +111,9 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 20px;
-  min-height: 0; /* required for flex children to scroll correctly */
+  /* bottom padding = nav height + safe area so content isn't hidden under nav */
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  min-height: 0;
 }
 
 /* Tablet: left rail */
@@ -178,9 +181,22 @@ body {
   align-items: stretch;
   flex-shrink: 0;
   z-index: 500;
+  /* Pad content above the home indicator */
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  /* Ensure it always hugs the bottom of its container */
-  margin-top: auto;
+  /* Extend background color below into the safe area visually */
+  position: relative;
+}
+
+/* Paint the safe area zone with nav background so there's no gap/different color */
+#bottom-nav::after {
+  content: '';
+  position: absolute;
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: var(--bg-base);
+  pointer-events: none;
 }
 
 .nav-tab {
@@ -1164,8 +1180,6 @@ body {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 </style>
-<!-- Set --app-height before first paint — prevents layout flash in iOS PWA standalone mode -->
-<script>document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');</script>
 </head>
 <body>
 
@@ -4207,23 +4221,6 @@ document.addEventListener('keydown', (e) => {
 // ─────────────────────────────────────────────────────────────
 //  BOOT
 // ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-//  APP HEIGHT — The only reliable fix for iOS Safari PWA mode.
-//  window.innerHeight is always the true visible height whether
-//  in browser, standalone PWA, or any iOS quirk mode.
-// ─────────────────────────────────────────────────────────────
-function setAppHeight() {
-  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
-}
-
-// Set immediately, then update on any resize or orientation change
-setAppHeight();
-window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', () => {
-  // Small delay for iOS to finish rotating before measuring
-  setTimeout(setAppHeight, 100);
-});
-
 window.addEventListener('DOMContentLoaded', init);
 
 </script>
