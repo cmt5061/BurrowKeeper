@@ -91,14 +91,14 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────
-   LAYOUT — mirrors TidyBun: height:100% chain,
-   flex column, nav is a normal flex child.
-   No dvh/svh/fill-available/position:fixed needed.
+   LAYOUT — exact TidyBun pattern:
+   height:100% chain → shell, fixed nav overlay
 ───────────────────────────────────────────── */
 #app-shell {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 #main-content {
@@ -106,8 +106,9 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  min-height: 0;
-  padding-bottom: 20px;
+  min-width: 0;
+  /* bottom padding clears the fixed nav */
+  padding-bottom: calc(var(--nav-height) + 16px);
 }
 
 /* Tablet: left rail */
@@ -169,14 +170,18 @@ html, body {
    BOTTOM NAV (mobile)
 ───────────────────────────────────────────── */
 #bottom-nav {
+  /* TidyBun pattern: position fixed, bottom 0, simple padding */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--bg-base);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
   display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-  z-index: 100;
-  /* Safe area padding pushes tabs up above home indicator */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 8px 0;
+  z-index: 500;
 }
 
 .nav-tab {
@@ -184,23 +189,23 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 3px;
-  padding: 10px 4px;
-  min-height: var(--nav-height);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-  border: none;
   background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
   color: var(--text-muted);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   -webkit-user-select: none;
   user-select: none;
+  transition: color 0.15s;
 }
+
+.nav-tab.active { color: var(--sage); }
+.nav-tab .nav-icon { font-size: 21px; line-height: 1; }
 
 .nav-tab.active { color: var(--sage); }
 .nav-tab .nav-icon { font-size: 22px; line-height: 1; }
