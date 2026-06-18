@@ -81,10 +81,9 @@ body.light-mode {
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 html, body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   background: var(--bg-deep);
   color: var(--text-primary);
@@ -92,18 +91,14 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────
-   LAYOUT
+   LAYOUT — mirrors TidyBun: height:100% chain,
+   flex column, nav is a normal flex child.
+   No dvh/svh/fill-available/position:fixed needed.
 ───────────────────────────────────────────── */
 #app-shell {
   display: flex;
   flex-direction: column;
-  /* position:fixed with inset:0 is the only approach that truly
-     fills the screen in iOS PWA standalone mode — no gap, no math */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  height: 100%;
 }
 
 #main-content {
@@ -111,9 +106,8 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* bottom padding = nav height + safe area so content isn't hidden under nav */
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
   min-height: 0;
+  padding-bottom: 20px;
 }
 
 /* Tablet: left rail */
@@ -180,23 +174,9 @@ html, body {
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  z-index: 500;
-  /* Pad content above the home indicator */
+  z-index: 100;
+  /* Safe area padding pushes tabs up above home indicator */
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  /* Extend background color below into the safe area visually */
-  position: relative;
-}
-
-/* Paint the safe area zone with nav background so there's no gap/different color */
-#bottom-nav::after {
-  content: '';
-  position: absolute;
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-bottom, 0px);
-  background: var(--bg-base);
-  pointer-events: none;
 }
 
 .nav-tab {
