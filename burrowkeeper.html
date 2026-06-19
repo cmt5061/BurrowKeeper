@@ -1917,7 +1917,7 @@ html, body {
       </div>
       <div class="form-group">
         <label class="form-label">Maintenance Type</label>
-        <select class="form-select" id="mm-type">
+        <select class="form-select" id="mm-type" onchange="handleLogTypeChange(this.value)">
           <option value="Inspection">Inspection</option>
           <option value="Service">Service</option>
           <option value="Repair">Repair</option>
@@ -1964,6 +1964,38 @@ html, body {
       <div class="form-group">
         <label class="form-label">Notes</label>
         <textarea class="form-textarea" id="mm-notes" placeholder="What was done, any findings…"></textarea>
+      </div>
+
+      <!-- Contextual fields — shown/hidden based on log type -->
+      <div id="mm-contextual" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px" id="mm-ctx-label">Update Asset</div>
+
+        <!-- Shown for Replacement / Installation -->
+        <div id="mm-ctx-replacement" style="display:none">
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">New Install Date</label>
+              <input class="form-input" type="date" id="mm-new-install-date">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">New Replacement Year</label>
+              <input class="form-input" type="number" id="mm-new-replacement-year" placeholder="e.g. 2044">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Updated Replacement Cost</label>
+            <input class="form-input" type="number" id="mm-new-replacement-cost" placeholder="Leave blank to keep current">
+          </div>
+        </div>
+
+        <!-- Shown for all types — advance next maintenance due date -->
+        <div id="mm-ctx-next-maint">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Set Next Maintenance Due</label>
+            <input class="form-input" type="date" id="mm-new-next-maint">
+            <div class="form-hint" style="margin-top:4px">Leave blank to keep existing reminder</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2638,9 +2670,20 @@ function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
 
+// Returns the date of the most recent Replacement or Installation log for this asset
+function lastReplacementDate(asset) {
+  const logs = Object.values(APP.data.maintenance || {})
+    .filter(m => m.assetId === asset.id && ['Replacement','Installation'].includes(m.type))
+    .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  return logs.length > 0 ? logs[0].date : null;
+}
+
 function assetAge(asset) {
-  if (!asset.installDate) return null;
-  const years = (Date.now() - new Date(asset.installDate + 'T12:00:00').getTime()) / (365.25 * 86400000);
+  // Use most recent replacement/installation log as the new "born on" date
+  const replacedOn = lastReplacementDate(asset);
+  const baseDate = replacedOn || asset.installDate;
+  if (!baseDate) return null;
+  const years = (Date.now() - new Date(baseDate + 'T12:00:00').getTime()) / (365.25 * 86400000);
   return Math.max(0, years);
 }
 
@@ -3380,6 +3423,42 @@ function renderMaintHistory() {
   el.innerHTML = html;
 }
 
+function handleLogTypeChange(type) {
+  const ctx = document.getElementById('mm-contextual');
+  const ctxLabel = document.getElementById('mm-ctx-label');
+  const ctxReplacement = document.getElementById('mm-ctx-replacement');
+  const ctxNextMaint = document.getElementById('mm-ctx-next-maint');
+  if (!ctx) return;
+
+  const isReplacement = ['Replacement','Installation'].includes(type);
+
+  // Always show the contextual panel (it has next-maint for all types)
+  ctx.style.display = 'block';
+
+  if (isReplacement) {
+    ctxLabel.textContent = '🔄 Update Asset After Replacement';
+    ctxReplacement.style.display = 'block';
+    // Pre-fill new install date with the log date
+    const logDate = document.getElementById('mm-date').value;
+    const newInstall = document.getElementById('mm-new-install-date');
+    if (newInstall && logDate) {
+      newInstall.value = logDate;
+      // Auto-calc replacement year from asset lifespan
+      const assetId = document.getElementById('mm-asset').value;
+      const asset = APP.data.assets?.[assetId];
+      if (asset && asset.lifespan) {
+        const newYear = parseInt(logDate.slice(0,4)) + asset.lifespan;
+        document.getElementById('mm-new-replacement-year').value = newYear;
+      }
+    }
+    ctxLabel.textContent = '🔄 Reset Asset Clock After Replacement';
+  } else {
+    ctxLabel.textContent = '📅 Update Next Maintenance Due';
+    ctxReplacement.style.display = 'none';
+  }
+  ctxNextMaint.style.display = 'block';
+}
+
 function openAddMaintenanceModal(preselectedAssetId) {
   document.getElementById('mm-title').textContent = 'Log Maintenance';
   document.getElementById('mm-id').value = '';
@@ -3394,6 +3473,15 @@ function openAddMaintenanceModal(preselectedAssetId) {
   ['mm-nc-company','mm-nc-contact','mm-nc-phone','mm-nc-email'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+
+  // Reset contextual fields
+  const ctx = document.getElementById('mm-contextual');
+  if (ctx) ctx.style.display = 'none';
+  ['mm-new-install-date','mm-new-replacement-year','mm-new-replacement-cost','mm-new-next-maint'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const ctxR = document.getElementById('mm-ctx-replacement');
+  if (ctxR) ctxR.style.display = 'none';
 
   // Populate asset select
   const sel = document.getElementById('mm-asset');
@@ -3450,22 +3538,38 @@ async function saveMaintenance() {
   APP.data.maintenance = APP.data.maintenance || {};
   APP.data.maintenance[id] = entry;
 
-  // Update asset's last maintenance date
+  // Update asset fields based on log type and contextual form inputs
   const asset = APP.data.assets?.[assetId];
   if (asset) {
     const updates = {};
+    const logType = entry.type;
+
+    // Always: update lastMaint
     if (!asset.lastMaint || date > asset.lastMaint) {
-      asset.lastMaint = date;
       updates.lastMaint = date;
     }
-    // If this log satisfies a nextMaint reminder, advance nextMaint
-    // so the reminder disappears (isReminderResolved will return true)
-    // We don't auto-set the new nextMaint — that stays as-is for user to update
-    // But we do clear it if the log is on or after nextMaint
-    if (asset.nextMaint && date >= asset.nextMaint) {
-      // Don't clear nextMaint — isReminderResolved() will suppress the reminder
-      // This preserves the date for reference
+
+    // Replacement / Installation: reset the asset clock
+    if (['Replacement','Installation'].includes(logType)) {
+      const newInstall = document.getElementById('mm-new-install-date')?.value;
+      const newReplYear = document.getElementById('mm-new-replacement-year')?.value;
+      const newReplCost = document.getElementById('mm-new-replacement-cost')?.value;
+
+      // Update installDate to the replacement date so assetAge resets
+      if (newInstall) updates.installDate = newInstall;
+      // Recalculate replacement year
+      if (newReplYear) updates.replacementYear = newReplYear;
+      else if (newInstall && asset.lifespan) {
+        updates.replacementYear = String(parseInt(newInstall.slice(0,4)) + asset.lifespan);
+      }
+      // Update replacement cost if provided
+      if (newReplCost && parseFloat(newReplCost) > 0) updates.replacementCost = parseFloat(newReplCost);
     }
+
+    // All types: advance nextMaint if user set one
+    const newNextMaint = document.getElementById('mm-new-next-maint')?.value;
+    if (newNextMaint) updates.nextMaint = newNextMaint;
+
     if (Object.keys(updates).length > 0) {
       Object.assign(APP.data.assets[assetId], updates);
       for (const [k,v] of Object.entries(updates)) {
