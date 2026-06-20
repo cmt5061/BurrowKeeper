@@ -1793,8 +1793,9 @@ html, body {
     <button class="nav-tab" data-screen="timeline" onclick="showScreen('timeline')">
       <span class="nav-icon">📅</span><span>Timeline</span>
     </button>
-    <button class="nav-tab" data-screen="settings" onclick="showScreen('settings')">
-      <span class="nav-icon">⚙️</span><span>Settings</span>
+    <button class="nav-tab" id="nav-more-tab" onclick="openMoreMenu()">
+      <span class="nav-icon">☰</span><span>More</span>
+      <span class="nav-badge" id="nav-more-badge" style="display:none">!</span>
     </button>
   </nav>
 </div><!-- /app-shell -->
@@ -2102,6 +2103,38 @@ html, body {
     <div class="modal-footer">
       <button class="btn btn-primary" style="flex:1" onclick="saveWarranty()">Save Warranty</button>
       <button class="btn btn-secondary" onclick="closeModal('warranty-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- More Menu (mobile) — gives portrait-mode access to screens that don't
+     have their own bottom-nav slot: Contractors, Warranties, Passport, Settings -->
+<div class="modal-overlay" id="more-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">More</span>
+      <button class="btn btn-ghost btn-icon-only" onclick="closeModal('more-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:12px 16px 24px">
+      <button class="rail-nav-item" style="width:100%;padding:14px 12px;font-size:15px" onclick="goToMoreScreen('contractors')">
+        <span class="nav-icon">👷</span><span class="nav-label">Contractors</span>
+        <span style="color:var(--text-muted)">›</span>
+      </button>
+      <button class="rail-nav-item" style="width:100%;padding:14px 12px;font-size:15px" onclick="goToMoreScreen('warranties')">
+        <span class="nav-icon">📋</span><span class="nav-label">Warranties</span>
+        <span class="rail-nav-badge" id="more-warr-badge" style="display:none">0</span>
+        <span style="color:var(--text-muted);margin-left:8px">›</span>
+      </button>
+      <button class="rail-nav-item" style="width:100%;padding:14px 12px;font-size:15px" onclick="goToMoreScreen('passport')">
+        <span class="nav-icon">📗</span><span class="nav-label">House Passport</span>
+        <span style="color:var(--text-muted)">›</span>
+      </button>
+      <hr class="divider" style="margin:8px 0">
+      <button class="rail-nav-item" style="width:100%;padding:14px 12px;font-size:15px" onclick="goToMoreScreen('settings')">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+        <span style="color:var(--text-muted)">›</span>
+      </button>
     </div>
   </div>
 </div>
@@ -2521,7 +2554,7 @@ function listenToFirebase() {
       APP.data.settings = remote.settings || APP.data.settings;
       localStorage.setItem('bk_data', JSON.stringify(APP.data));
       updateLastSync();
-      refreshCurrentScreen();
+      refreshAll();
     }
   });
 }
@@ -2614,6 +2647,11 @@ const SCREEN_TITLES = {
   passport:'House Passport', settings:'Settings'
 };
 
+// Screens grouped under the mobile "More" tab — Contractors, Warranties,
+// House Passport, and Settings don't get their own bottom-nav slot, so the
+// More tab lights up whenever one of these is the active screen.
+const MORE_SCREENS = ['contractors', 'warranties', 'passport', 'settings'];
+
 function showScreen(name) {
   APP.currentScreen = name;
 
@@ -2621,7 +2659,12 @@ function showScreen(name) {
   const s = document.getElementById('screen-' + name);
   if (s) s.classList.add('active');
 
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  // Clear active state from both mobile tabs and the tablet/desktop rail
+  document.querySelectorAll('.nav-tab, .rail-nav-item').forEach(t => t.classList.remove('active'));
+
+  if (MORE_SCREENS.includes(name)) {
+    document.getElementById('nav-more-tab')?.classList.add('active');
+  }
   document.querySelectorAll(`[data-screen="${name}"]`).forEach(t => t.classList.add('active'));
 
   const title = document.getElementById('top-bar-title');
@@ -2646,6 +2689,16 @@ function refreshCurrentScreen() {
   else if (name === 'warranties') renderWarranties();
   else if (name === 'passport') renderPassport();
   updateBadges();
+}
+
+// Refreshes the dashboard summary card AND whatever screen is currently
+// visible. The dashboard's elements stay in the DOM at all times (just
+// hidden via CSS when inactive), so keeping it in sync here means the
+// Home tab is always current the moment the user navigates back to it —
+// no stale Health Score, asset counts, or reminder badges.
+function refreshAll() {
+  renderDashboard();
+  refreshCurrentScreen();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3162,7 +3215,7 @@ async function saveAsset() {
   localStorage.setItem('bk_data', JSON.stringify(APP.data));
   await saveToFirebase('assets/' + id, asset);
   closeModal('asset-modal');
-  renderAssets();
+  refreshAll();
   showToast('✅ Asset saved');
 }
 
@@ -3180,7 +3233,7 @@ function confirmDeleteAsset(id) {
     localStorage.setItem('bk_data', JSON.stringify(APP.data));
     await saveAllToFirebase();
     closeModal('confirm-modal');
-    renderAssets();
+    refreshAll();
     showToast('🗑️ Asset deleted');
   });
 }
@@ -3581,7 +3634,7 @@ async function saveMaintenance() {
   localStorage.setItem('bk_data', JSON.stringify(APP.data));
   await saveToFirebase('maintenance/' + id, entry);
   closeModal('maint-modal');
-  renderMaintenance();
+  refreshAll();
   showToast('✅ Maintenance logged');
 }
 
@@ -3591,7 +3644,7 @@ async function confirmDeleteMaintenance(id) {
     localStorage.setItem('bk_data', JSON.stringify(APP.data));
     await dbRef('maintenance/' + id).remove();
     closeModal('confirm-modal');
-    renderMaintHistory();
+    refreshAll();
     showToast('🗑️ Entry deleted');
   });
 }
@@ -3789,7 +3842,7 @@ async function saveContractor() {
   localStorage.setItem('bk_data', JSON.stringify(APP.data));
   await saveToFirebase('contractors/' + id, contractor);
   closeModal('contractor-modal');
-  renderContractors();
+  refreshAll();
   showToast('✅ Contractor saved');
 }
 
@@ -3800,7 +3853,7 @@ function confirmDeleteContractor(id) {
     localStorage.setItem('bk_data', JSON.stringify(APP.data));
     await dbRef('contractors/' + id).remove();
     closeModal('confirm-modal');
-    renderContractors();
+    refreshAll();
     showToast('🗑️ Contractor removed');
   });
 }
@@ -3893,7 +3946,7 @@ async function saveWarranty() {
   localStorage.setItem('bk_data', JSON.stringify(APP.data));
   await saveToFirebase('warranties/' + id, warranty);
   closeModal('warranty-modal');
-  renderWarranties();
+  refreshAll();
   showToast('✅ Warranty saved');
 }
 
@@ -3903,7 +3956,7 @@ function confirmDeleteWarranty(id) {
     localStorage.setItem('bk_data', JSON.stringify(APP.data));
     await dbRef('warranties/' + id).remove();
     closeModal('confirm-modal');
-    renderWarranties();
+    refreshAll();
     showToast('🗑️ Warranty removed');
   });
 }
@@ -4072,6 +4125,7 @@ async function saveHomeProfile() {
 
   // Update display names
   updateHouseNameDisplays();
+  refreshAll();
   showToast('✅ Profile saved');
 }
 
@@ -4192,10 +4246,29 @@ function updateBadges() {
   const navBadge = document.getElementById('nav-maint-badge');
   const railBadge = document.getElementById('rail-maint-badge');
   const warrBadge = document.getElementById('rail-warr-badge');
+  const moreBadge = document.getElementById('nav-more-badge');
+  const moreWarrBadge = document.getElementById('more-warr-badge');
 
   if (navBadge) { navBadge.style.display = maintCount > 0 ? 'flex' : 'none'; navBadge.textContent = maintCount > 9 ? '9+' : maintCount; }
   if (railBadge) { railBadge.style.display = maintCount > 0 ? 'flex' : 'none'; railBadge.textContent = maintCount; }
   if (warrBadge) { warrBadge.style.display = warrCount > 0 ? 'flex' : 'none'; warrBadge.textContent = warrCount; }
+  // "More" tab badge surfaces expiring warranties since Contractors/Passport/Settings
+  // don't have their own actionable counts
+  if (moreBadge) { moreBadge.style.display = warrCount > 0 ? 'flex' : 'none'; moreBadge.textContent = warrCount > 9 ? '9+' : warrCount; }
+  if (moreWarrBadge) { moreWarrBadge.style.display = warrCount > 0 ? 'inline-flex' : 'none'; moreWarrBadge.textContent = warrCount; }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MORE MENU (mobile) — gives portrait-mode access to Contractors,
+//  Warranties, Passport, and Settings without needing landscape/tablet width
+// ─────────────────────────────────────────────────────────────
+function openMoreMenu() {
+  openModal('more-modal');
+}
+
+function goToMoreScreen(name) {
+  closeModal('more-modal');
+  showScreen(name);
 }
 
 // ─────────────────────────────────────────────────────────────
