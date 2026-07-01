@@ -1868,6 +1868,11 @@ html, body {
         </div>
       </div>
       <div class="form-group">
+        <label class="form-label">Exact Replacement Date <span class="text-muted text-xs" style="font-weight:400">(optional)</span></label>
+        <input class="form-input" type="date" id="am-replacement-date">
+        <div class="form-hint">If you know the specific date (e.g. a scheduled install), it'll show on the Timeline instead of just the year</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Notes</label>
         <textarea class="form-textarea" id="am-notes" placeholder="Model number, brand, installer, any notes…"></textarea>
       </div>
@@ -3116,7 +3121,7 @@ function openAssetDetail(id) {
       <div class="detail-row"><span class="detail-key">Install Date</span><span class="detail-val">${fmtDate(a.installDate)}</span></div>
       <div class="detail-row"><span class="detail-key">Age</span><span class="detail-val">${age !== null ? Math.round(age) + ' years' : '—'}</span></div>
       <div class="detail-row"><span class="detail-key">Expected Lifespan</span><span class="detail-val">${a.lifespan||'—'} years</span></div>
-      <div class="detail-row"><span class="detail-key">Replacement Year</span><span class="detail-val">${a.replacementYear||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Replacement Year</span><span class="detail-val">${a.replacementDate ? fmtDate(a.replacementDate) : (a.replacementYear||'—')}</span></div>
       <div class="detail-row"><span class="detail-key">Replacement Cost</span><span class="detail-val">${fmt$$(a.replacementCost)}</span></div>
       <div class="detail-row"><span class="detail-key">Last Maintenance</span><span class="detail-val">${fmtDate(a.lastMaint)}</span></div>
       <div class="detail-row"><span class="detail-key">Next Due</span><span class="detail-val ${a.nextMaint && a.nextMaint < today ? 'text-coral' : ''}">${fmtDate(a.nextMaint)}</span></div>
@@ -3161,6 +3166,7 @@ function openAddAssetModal() {
   document.getElementById('am-next-maint').value = '';
   document.getElementById('am-warranty-exp').value = '';
   document.getElementById('am-replacement-year').value = '';
+  document.getElementById('am-replacement-date').value = '';
   document.getElementById('am-notes').value = '';
   openModal('asset-modal');
 }
@@ -3179,6 +3185,7 @@ function openEditAssetModal(id) {
   document.getElementById('am-next-maint').value = a.nextMaint||'';
   document.getElementById('am-warranty-exp').value = a.warrantyExp||'';
   document.getElementById('am-replacement-year').value = a.replacementYear||'';
+  document.getElementById('am-replacement-date').value = a.replacementDate||'';
   document.getElementById('am-notes').value = a.notes||'';
   openModal('asset-modal');
 }
@@ -3194,6 +3201,11 @@ async function saveAsset() {
   if (!replacementYear && installDate) {
     replacementYear = String(parseInt(installDate.slice(0,4)) + lifespan);
   }
+  const replacementDate = document.getElementById('am-replacement-date').value;
+  // Keep replacementYear consistent if an exact date was given instead
+  if (replacementDate && !replacementYear) {
+    replacementYear = replacementDate.slice(0,4);
+  }
 
   const asset = {
     name,
@@ -3205,6 +3217,7 @@ async function saveAsset() {
     nextMaint: document.getElementById('am-next-maint').value,
     warrantyExp: document.getElementById('am-warranty-exp').value,
     replacementYear,
+    replacementDate,
     notes: document.getElementById('am-notes').value.trim(),
     archived: false,
     contractorId: APP.data.assets?.[id]?.contractorId||''
@@ -3617,6 +3630,10 @@ async function saveMaintenance() {
       }
       // Update replacement cost if provided
       if (newReplCost && parseFloat(newReplCost) > 0) updates.replacementCost = parseFloat(newReplCost);
+      // Clear any previously-set exact replacement date — that cycle is
+      // done, and the next replacement is just an estimated year again
+      // until the user sets a new exact date on the asset
+      updates.replacementDate = '';
     }
 
     // All types: advance nextMaint if user set one
@@ -3668,7 +3685,7 @@ function renderTimeline() {
 
   let items = [];
 
-  // Home built
+  // Home built — only a year is captured in the profile, never an exact date
   items.push({
     date: yearBuilt + '-01-01',
     year: yearBuilt,
@@ -3677,10 +3694,11 @@ function renderTimeline() {
     type: 'home',
     icon: '🏠',
     cost: null,
-    future: false
+    future: false,
+    hasExactDate: false
   });
 
-  // Maintenance history
+  // Maintenance history — these always have a real logged date
   allMaintenance().forEach(m => {
     items.push({
       date: m.date,
@@ -3690,23 +3708,27 @@ function renderTimeline() {
       type: 'maintenance',
       icon: MAINT_TYPE_ICONS[m.type]||'🔧',
       cost: m.cost,
-      future: false
+      future: false,
+      hasExactDate: true
     });
   });
 
-  // Future replacements
+  // Future replacements — only a target year is known unless the asset
+  // has an explicit replacementDate field set by the user
   activeAssets().forEach(a => {
     const ry = parseInt(a.replacementYear) || (a.installDate ? parseInt(a.installDate.slice(0,4)) + (a.lifespan||20) : null);
     if (ry && ry > currentYear) {
+      const exactDate = a.replacementDate || null;
       items.push({
-        date: ry + '-06-01',
+        date: exactDate || (ry + '-06-01'),
         year: ry,
         title: a.name + ' Replacement',
         detail: 'Expected based on ' + (a.lifespan||'estimated') + ' year lifespan',
         type: 'future',
         icon: '🔄',
         cost: a.replacementCost,
-        future: true
+        future: true,
+        hasExactDate: !!exactDate
       });
     }
   });
@@ -3746,6 +3768,7 @@ function renderTimeline() {
               <span class="timeline-title">${item.title}</span>
               ${item.future ? '<span class="badge badge-amber" style="font-size:9px">Projected</span>' : ''}
             </div>
+            ${item.hasExactDate ? `<div class="timeline-date" style="margin-top:1px">${fmtDate(item.date)}</div>` : ''}
             ${item.detail ? `<div class="timeline-detail">${item.detail}</div>` : ''}
             ${item.cost ? `<div class="timeline-cost">${fmt$$(item.cost)}</div>` : ''}
           </div>`).join('<hr style="border-color:var(--border-light);margin:8px 0">')}
